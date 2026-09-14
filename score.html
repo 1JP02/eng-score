@@ -206,62 +206,9 @@
   </details>
 
   <details class="card" id="moreCard">
-    <summary>更多工具（批量评分 / 离线汇总码 / 本机记录 / 评分标准）</summary>
+    <summary>评分参考标准与计分规则</summary>
 
-    <details style="margin-top:10px">
-      <summary>快速批量评分（一人给全班打分，每人约 3 秒）</summary>
-      <div class="grid" style="margin-top:8px">
-        <div><label>学生名单（一行一个，可直接粘贴）</label><textarea id="batchList" rows="4" placeholder="张三&#10;李四&#10;王五"></textarea></div>
-        <div><label>评委</label><input id="batchJudge" placeholder="例：Ms. Wang"></div>
-      </div>
-      <div class="actions"><button id="batchStart" class="primary">开始批量评分</button><button id="batchClear">清空名单</button></div>
-      <div id="batchPanel" style="display:none">
-        <div class="stats"><div>第 <b id="batchIdx">1</b> / <span id="batchTotal">0</span> 位：<b id="batchName">—</b></div></div>
-        <div id="batchRows"></div>
-        <div class="actions">
-          <button id="batchSave" class="primary">保存并下一位（Enter）</button>
-          <button id="batchPrev">上一位</button>
-          <button id="batchSkip">跳过</button>
-          <button id="batchEnd">结束并统计</button>
-        </div>
-        <div class="stats" id="batchProgress"></div>
-      </div>
-    </details>
-
-    <details>
-      <summary>离线汇总码（网络不通时用，人数不限）</summary>
-      <div class="grid" style="margin-top:8px">
-        <div><label>我的评分汇总码（发到群里）</label>
-        <input id="myCode" readonly style="font-family:ui-monospace,Consolas,monospace;font-weight:800;color:var(--brand)"></div>
-      </div>
-      <div class="actions"><button id="copyCode" class="primary">复制汇总码</button></div>
-      <p class="tipline">格式 A=内容 B=语言 C=互动 D=表现，例如 <code>A3B2.5C1D2</code></p>
-      <label style="margin-top:8px">主持人：粘贴大家的汇总码（可整段粘贴群聊记录）</label>
-      <textarea id="importBox" rows="5" placeholder="A3B2.5C1D2&#10;张三 A2.5B2C0.5D2&#10;李四 2/2.5/1/2"></textarea>
-      <div class="actions">
-        <button id="doImport" class="primary">导入并统计</button>
-        <button id="extractImport">从聊天记录整段提取</button>
-        <button id="clearImport">清空</button>
-      </div>
-      <div class="stats" id="importResult"></div>
-    </details>
-
-    <details>
-      <summary>本机记录 <span id="count" class="badge"></span></summary>
-      <div class="tablewrap">
-        <table>
-          <thead><tr><th>#</th><th>演讲人</th><th class="num">内容</th><th class="num">语言</th><th class="num">互动</th><th class="num">表现</th><th class="num">总分</th><th></th></tr></thead>
-          <tbody id="tbody"><tr><td colspan="8" class="empty">暂无记录</td></tr></tbody>
-        </table>
-      </div>
-      <div class="actions">
-        <button id="export">导出 CSV</button>
-        <button id="clear" class="danger">清空本机记录</button>
-      </div>
-    </details>
-
-    <details>
-      <summary>评分参考标准</summary>
+    <div style="margin-top:10px">
       <div class="tablewrap">
         <table>
           <thead><tr><th>评分项</th><th>满分</th><th>优秀</th><th>合格</th><th>待提高</th></tr></thead>
@@ -275,7 +222,7 @@
       </div>
       <p class="tipline">打分栏可输入 0 ~ 满分（步长 0.5，超出自动修正）。等级：≥9 优秀 ｜ 8-8.9 良好 ｜ 6-7.9 合格 ｜ 小于 6 待提高</p>
       <p class="tipline"><b>最终得分算法（体育赛事式去极值）</b>：4-6 位评委去掉 1 个最高分和 1 个最低分，≥7 位去掉 2 高 2 低，≤3 位直接平均；被去掉的评委在打分板上会标注「最高/最低·不计入」。</p>
-    </details>
+    </div>
   </details>
 
   <details class="card" open>
@@ -2709,8 +2656,6 @@ const ITEMS = [
   { key:'delivery',    zh:'表现', en:'Delivery',    max:3 }
 ];
 const state = { content:0, language:0, interaction:0, delivery:0 };
-let localRecords = [];
-let batch = { names:[], idx:0, judge:'', cur:null, map:{}, active:false };
 let cloud = { on:false, mq:null, srv:'wss://broker.hivemq.com:8884/mqtt', room:'', name:'', uid:'',
               byUid:{}, who:{}, ctrl:{speaker:'',topic:'',round:0}, history:[], connecting:false,
               autoNamed:false, retry:0, watchTimer:null, lastMsgAt:0, manualStop:true,
@@ -2786,7 +2731,6 @@ function paint(){
   const badge = $('#grade');
   badge.textContent = g[0]; badge.style.background = g[1]; badge.style.color = g[2];
   $('#breakdown').textContent = ITEMS.map(i=>i.zh + ' ' + fmt(state[i.key]) + '/' + i.max).join('　·　');
-  const mc = $('#myCode'); if (mc) mc.value = codeOf();
 }
 
 /* ================= 云端联机 ================= */
@@ -3134,7 +3078,7 @@ function cloudSubmit(){
   cloud.byUid[cloud.uid] = { name: cloud.name, scores: payload.scores, comment: payload.comment,
                              total: total(), ts: payload.ts, round: payload.round };
   cloud.lastMsgAt = Date.now();
-  cloudRender();
+  cloudRenderNow();                     // 立即反馈：立刻锁定并显示我的分数
   cloud.mq.publish(tScore(cloud.uid), JSON.stringify(payload), true);
   toast('已提交：' + fmt(total()) + ' 分（本场不可再改）');
 }
@@ -3156,7 +3100,7 @@ $('#claimOwner').addEventListener('click', ()=>{
   if (!confirm('当前房主：' + cur + '\n\n确定要接管主持权限吗？（所有人都会看到你成为房主）')) return;
   publishOwner();
   cloud.owner = { uid: cloud.uid, name: cloud.name || '房主', ts: Date.now() };
-  cloudRender();
+  cloudRenderNow();
   toast('你已成为房主');
 });
 $('#cloudPush').addEventListener('click', cloudSubmit);
@@ -3173,7 +3117,7 @@ $('#cloudSetSpeaker').addEventListener('click', ()=>{
   Object.keys(cloud.byUid).forEach(u => cloud.mq.publish(tScore(u), '', true));
   cloud.byUid = {};
   cloud.ctrl = { speaker: sp, topic: $('#topic').value.trim(), round: (cloud.ctrl.round||0) + 1 };
-  cloudPublishState(); cloudRender();
+  cloudPublishState(); cloudRenderNow();
   toast('已设为：' + sp + '（本场已清空，大家可重新打分）');
 });
 $('#cloudFinish').addEventListener('click', ()=>{
@@ -3192,7 +3136,7 @@ $('#cloudFinish').addEventListener('click', ()=>{
     cloud.byUid = {};
   }
   cloud.ctrl = { speaker:'', topic:'', round: (cloud.ctrl.round||0) + 1 };
-  cloudPublishState(); cloudRender();
+  cloudPublishState(); cloudRenderNow();
   toast('已归档，进入下一位');
 });
 $('#cloudInvite').addEventListener('click', ()=>copyText(inviteText(), '邀请信息已复制，发到群里即可'));
@@ -3275,201 +3219,6 @@ setInterval(()=>{
   el.textContent = sec <= 2 ? '刚刚同步' : (sec + ' 秒前同步');
 }, 1000);
 
-/* ================= 离线汇总码 ================= */
-const CODE_KEYS = ['A','B','C','D'];
-function codeOf(){ return ITEMS.map((it,i)=>CODE_KEYS[i] + fmt(state[it.key])).join(''); }
-function parseCodeLine(line){
-  let s = String(line||'').trim(); if (!s) return null;
-  const pick = k => { const m = s.match(new RegExp(k + '\\s*[:：=]?\\s*(\\d+(?:\\.\\d+)?)','i')); return m ? parseFloat(m[1]) : NaN; };
-  const nameOf = idx => s.slice(0, idx).replace(/[,，:：;；\s]+$/,'').trim();
-  if (/A/i.test(s)){
-    const c=pick('A'), l=pick('B'), i2=pick('C'), d=pick('D');
-    if ([c,l,i2,d].every(isFinite)){ const m = s.match(/A\s*[:：=]?\s*\d/i); return { name: m?nameOf(m.index):'', content:c, language:l, interaction:i2, delivery:d }; }
-  }
-  const nums = s.match(/\d+(?:\.\d+)?/g);
-  if (nums && nums.length >= 4){
-    const idx = s.indexOf(nums[0]);
-    return { name: nameOf(idx), content:+nums[0], language:+nums[1], interaction:+nums[2], delivery:+nums[3] };
-  }
-  return null;
-}
-function extractAllCodes(text){
-  const out = [];
-  const clean = t => String(t||'').replace(/\d{1,2}月\d{1,2}日/g,' ').replace(/\d{1,2}:\d{2}(:\d{2})?/g,' ')
-      .replace(/[\[\]【】()（）:：,，;；\-—|]/g,' ').trim().split(/\s+/).filter(w=>w && !/^\d+(\.\d+)?$/.test(w)).join(' ').slice(0,14);
-  const nameAt = idx => {
-    const lines = text.slice(0, idx).split('\n');
-    const same = clean(lines[lines.length-1]); if (same) return same;
-    for (let k = lines.length-2; k >= Math.max(0, lines.length-4); k--){ const c = clean(lines[k]); if (c) return c; }
-    return '';
-  };
-  const put = (idx, n) => out.push({ name: nameAt(idx), content:n[0], language:n[1], interaction:n[2], delivery:n[3] });
-  let m;
-  const re1 = /A\s*[:：=]?\s*(\d+(?:\.\d+)?)[\s,，;；/|]*B\s*[:：=]?\s*(\d+(?:\.\d+)?)[\s,，;；/|]*C\s*[:：=]?\s*(\d+(?:\.\d+)?)[\s,，;；/|]*D\s*[:：=]?\s*(\d+(?:\.\d+)?)/gi;
-  while ((m = re1.exec(text))) put(m.index, [+m[1],+m[2],+m[3],+m[4]]);
-  const re2 = /[【\[（(]\s*(\d+(?:\.\d+)?)\s*[/|,，\-]\s*(\d+(?:\.\d+)?)\s*[/|,，\-]\s*(\d+(?:\.\d+)?)\s*[/|,，\-]\s*(\d+(?:\.\d+)?)\s*[】\]）)]/g;
-  while ((m = re2.exec(text))) put(m.index, [+m[1],+m[2],+m[3],+m[4]]);
-  const re3 = /内容\s*[:：]?\s*(\d+(?:\.\d+)?)[^\d]{0,10}?语言\s*[:：]?\s*(\d+(?:\.\d+)?)[^\d]{0,10}?互动\s*[:：]?\s*(\d+(?:\.\d+)?)[^\d]{0,10}?表现\s*[:：]?\s*(\d+(?:\.\d+)?)/g;
-  while ((m = re3.exec(text))) put(m.index, [+m[1],+m[2],+m[3],+m[4]]);
-  return out;
-}
-function addRecord(speaker, judge, sc, comment){
-  const t = ITEMS.reduce((a,i)=>a + (+sc[i.key]||0), 0);
-  localRecords.push({ id:'r'+Date.now()+Math.random().toString(36).slice(2,5), speaker, judge,
-                      scores:{...sc}, total: Math.round(t*100)/100, comment: comment||'', ts: Date.now() });
-}
-$('#copyCode').addEventListener('click', ()=>copyText(codeOf(), '汇总码已复制：' + codeOf()));
-$('#clearImport').addEventListener('click', ()=>{ $('#importBox').value=''; $('#importResult').innerHTML=''; });
-$('#doImport').addEventListener('click', ()=>{
-  const lines = $('#importBox').value.split(/\r?\n/);
-  const speaker = $('#cloudSpeaker').value.trim() || '未指定演讲人';
-  let ok=0, bad=0, auto=0;
-  lines.forEach(line=>{
-    if (!line.trim()) return;
-    const p = parseCodeLine(line); if (!p){ bad++; return; }
-    const sc = {}; ITEMS.forEach(it=>{ let v = +p[it.key]; if (!isFinite(v)) v = 0; sc[it.key] = Math.max(0, Math.min(it.max, Math.round(v*2)/2)); });
-    addRecord(speaker, (p.name||'').trim() || ('离线评委' + (++auto)), sc, '离线汇总'); ok++;
-  });
-  saveLocal(); renderLocal();
-  $('#importResult').innerHTML = ok ? `<div>导入 <b>${ok}</b> 条${bad?`，跳过 ${bad} 行`:''}</div>` : `<div style="color:var(--bad)">没有识别到有效汇总码（${bad} 行）</div>`;
-  toast(ok ? '已导入 ' + ok + ' 条' : '没识别到汇总码');
-});
-$('#extractImport').addEventListener('click', ()=>{
-  const found = extractAllCodes($('#importBox').value);
-  if (!found.length) return toast('没提取到汇总码');
-  const speaker = $('#cloudSpeaker').value.trim() || '未指定演讲人';
-  let auto = 0;
-  found.forEach(p=>{
-    const sc = {}; ITEMS.forEach(it=>{ let v = +p[it.key]; if (!isFinite(v)) v = 0; sc[it.key] = Math.max(0, Math.min(it.max, Math.round(v*2)/2)); });
-    addRecord(speaker, (p.name||'').trim() || ('离线评委' + (++auto)), sc, '离线汇总');
-  });
-  saveLocal(); renderLocal();
-  $('#importResult').innerHTML = `<div>从聊天记录提取到 <b>${found.length}</b> 条</div>`;
-  toast('已提取 ' + found.length + ' 条');
-});
-
-/* ================= 快速批量评分 ================= */
-function parseNameList(text){
-  const seen = {};
-  return String(text||'').split(/\r?\n/)
-    .map(s=>s.replace(/^\s*\d+\s*[.、)．:：]?\s*/,'').trim())
-    .filter(s=>{ if (!s || s.length>24 || seen[s]) return false; seen[s]=1; return true; });
-}
-document.getElementById('batchRows').innerHTML = ITEMS.map(it=>`
-  <div class="row">
-    <div class="nm">${it.zh}<small>${it.en} · ${it.max}</small></div>
-    <div class="stepper">
-      <button data-bd="-0.5" data-bk="${it.key}">−</button>
-      <input type="number" id="b-${it.key}" min="0" max="${it.max}" step="0.5" value="0" inputmode="decimal">
-      <button data-bd="0.5" data-bk="${it.key}">+</button>
-      <span class="of">/ ${it.max}</span>
-    </div>
-  </div>`).join('');
-function bGet(k){ return (batch.cur && batch.cur[k]) || 0; }
-function bSet(k, v, typing){
-  const it = ITEMS.find(i=>i.key===k);
-  let n = Number(v); if (!isFinite(n)) n = 0;
-  n = Math.max(0, Math.min(it.max, Math.round(n*2)/2));
-  batch.cur = batch.cur || {}; batch.cur[k] = n;
-  const el = document.getElementById('b-'+k);
-  if (el && !typing && Number(el.value) !== n) el.value = n;
-  bPaint();
-}
-function bPaint(){
-  const t = ITEMS.reduce((s,i)=>s+bGet(i.key),0);
-  $('#batchProgress').innerHTML = `<div>本题总分 <b>${fmt(t)}</b> / 10</div><div>已完成 <b>${Object.keys(batch.map).length}</b> / ${batch.names.length}</div>`;
-}
-document.querySelectorAll('[data-bk]').forEach(b=>b.addEventListener('click',()=>bSet(b.dataset.bk, bGet(b.dataset.bk) + parseFloat(b.dataset.bd))));
-ITEMS.forEach(it=>{
-  const el = document.getElementById('b-'+it.key);
-  el.addEventListener('input', ()=>{ const v = parseFloat(el.value); if (isFinite(v)) bSet(it.key, v, true); });
-  el.addEventListener('blur', ()=>bSet(it.key, el.value));
-  el.addEventListener('keydown', e=>{
-    if (e.key === 'Enter'){ e.preventDefault(); batchSaveNext(); }
-    else if (e.key === 'ArrowUp'){ e.preventDefault(); bSet(it.key, bGet(it.key)+0.5); }
-    else if (e.key === 'ArrowDown'){ e.preventDefault(); bSet(it.key, bGet(it.key)-0.5); }
-  });
-});
-function bLoad(){
-  const name = batch.names[batch.idx];
-  $('#batchIdx').textContent = Math.min(batch.idx+1, batch.names.length);
-  $('#batchTotal').textContent = batch.names.length;
-  $('#batchName').textContent = name || '（已到末尾）';
-  const prev = batch.map[name];
-  batch.cur = prev ? { ...prev.scores } : { content:0, language:0, interaction:0, delivery:0 };
-  ITEMS.forEach(it=>{ const el = document.getElementById('b-'+it.key); if (el) el.value = batch.cur[it.key]; });
-  bPaint();
-}
-function bSave(){
-  const name = batch.names[batch.idx]; if (!name) return;
-  const sc = { ...(batch.cur||{}) };
-  const t = ITEMS.reduce((s,i)=>s+(+sc[i.key]||0),0);
-  const obj = { id: batch.map[name] || ('b'+Date.now()), speaker: name, judge: batch.judge,
-                scores: sc, total: t, comment:'批量评分', ts: Date.now() };
-  const i = localRecords.findIndex(r=>r.id === obj.id);
-  if (i >= 0) localRecords[i] = obj; else localRecords.push(obj);
-  batch.map[name] = obj.id;
-  saveLocal(); renderLocal();
-}
-function batchSaveNext(){
-  if (!batch.active) return;
-  bSave(); batch.idx++;
-  if (batch.idx >= batch.names.length){ batchFinish(); return; }
-  bLoad();
-}
-function batchFinish(){
-  batch.active = false;
-  $('#batchName').textContent = '全部完成';
-  bPaint();
-  toast('批量评分完成，已并入「本机记录」');
-}
-$('#batchStart').addEventListener('click', ()=>{
-  const names = parseNameList($('#batchList').value);
-  if (!names.length) return toast('请先粘贴学生名单');
-  batch = { names, idx:0, judge: $('#batchJudge').value.trim() || '评委', cur:null, map:{}, active:true };
-  $('#batchPanel').style.display = 'block';
-  bLoad();
-  toast('共 ' + names.length + ' 人，打完按 Enter 下一位');
-});
-$('#batchClear').addEventListener('click', ()=>{ $('#batchList').value=''; toast('名单已清空'); });
-$('#batchSave').addEventListener('click', batchSaveNext);
-$('#batchSkip').addEventListener('click', ()=>{ if (!batch.active) return; batch.idx++; if (batch.idx>=batch.names.length) return batchFinish(); bLoad(); });
-$('#batchPrev').addEventListener('click', ()=>{ if (!batch.active || batch.idx===0) return; batch.idx--; bLoad(); });
-$('#batchEnd').addEventListener('click', ()=>{ if (batch.names.length) batchFinish(); });
-
-/* ================= 本机记录 ================= */
-function saveLocal(){ try { localStorage.setItem('eng_records_v2', JSON.stringify(localRecords)); } catch(e){} }
-function loadLocal(){ try { localRecords = JSON.parse(localStorage.getItem('eng_records_v2')) || []; } catch(e){ localRecords = []; } }
-function renderLocal(){
-  const tb = $('#tbody');
-  const sorted = [...localRecords].sort((a,b)=>b.total - a.total);
-  tb.innerHTML = sorted.length ? sorted.map((r,i)=>`<tr>
-      <td>${i+1}</td><td>${esc(r.speaker)}</td>
-      <td class="num">${fmt(r.scores.content)}</td><td class="num">${fmt(r.scores.language)}</td>
-      <td class="num">${fmt(r.scores.interaction)}</td><td class="num">${fmt(r.scores.delivery)}</td>
-      <td class="num"><b>${fmt(r.total)}</b></td>
-      <td><div class="btnrow"><button data-del="${r.id}">删</button></div></td></tr>`).join('')
-    : `<tr><td colspan="8" class="empty">暂无记录（批量评分 / 离线导入会出现在这里）</td></tr>`;
-  $('#count').textContent = localRecords.length ? localRecords.length + ' 条' : '';
-  tb.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{
-    localRecords = localRecords.filter(r=>r.id !== b.dataset.del); saveLocal(); renderLocal();
-  }));
-}
-$('#clear').addEventListener('click', ()=>{
-  if (!localRecords.length) return toast('暂无记录');
-  if (confirm('清空本机 ' + localRecords.length + ' 条记录？')){ localRecords=[]; saveLocal(); renderLocal(); toast('已清空'); }
-});
-$('#export').addEventListener('click', ()=>{
-  if (!localRecords.length) return toast('暂无记录可导出');
-  const rows = [['演讲人','评委','内容(3)','语言(3)','互动(1)','表现(3)','总分(10)','评语']];
-  [...localRecords].sort((a,b)=>b.total-a.total).forEach(r=>rows.push([r.speaker, r.judge,
-    fmt(r.scores.content), fmt(r.scores.language), fmt(r.scores.interaction), fmt(r.scores.delivery),
-    fmt(r.total), (r.comment||'').replace(/[\r\n]+/g,' ')]));
-  download(rows.map(r=>r.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\r\n'),
-           '英语演讲评分_' + new Date().toISOString().slice(0,10) + '.csv');
-  toast('已导出 ' + localRecords.length + ' 条');
-});
-
 /* ================= 初始化 ================= */
 (function init(){
   const p = new URLSearchParams(location.search);
@@ -3477,7 +3226,7 @@ $('#export').addEventListener('click', ()=>{
   const nameFromUrl = (p.get('name') || '').trim();
   if (roomFromUrl) $('#cloudRoom').value = roomFromUrl;
   if (nameFromUrl) $('#cloudName').value = nameFromUrl;
-  loadLocal(); renderLocal(); paint(); cloudSetButtons(); renderQR();
+  paint(); cloudSetButtons(); renderQR();
   if (roomFromUrl && p.get('auto') !== '0'){ cloud.room = roomFromUrl; cloudStart(); }
 })();
 </script>
