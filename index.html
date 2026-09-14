@@ -141,7 +141,7 @@
     </details>
 
     <details>
-      <summary>其他评委的分数（<span id="boardCount">0</span> 人）</summary>
+      <summary>其他评委的分数与评语（<span id="boardCount">0</span> 人 · <span id="commentCount">0</span> 条评语）</summary>
       <div class="tablewrap">
         <table>
           <thead><tr><th>评委</th><th class="num">内容</th><th class="num">语言</th><th class="num">互动</th><th class="num">表现</th><th class="num">总分</th></tr></thead>
@@ -149,6 +149,7 @@
         </table>
       </div>
       <div class="stats" id="liveStats"></div>
+      <div id="commentList" style="margin-top:10px"></div>
       <div class="actions">
         <button id="cloudRefresh">重新同步</button>
         <button id="cloudLeave" class="danger">退出房间</button>
@@ -190,12 +191,7 @@
     <div class="stats" id="cloudInfo"></div>
     <details style="margin-top:10px">
       <summary>已归档场次 <span id="histCount" class="badge"></span></summary>
-      <div class="tablewrap">
-        <table>
-          <thead><tr><th>演讲人</th><th class="num">人数</th><th class="num">内容</th><th class="num">语言</th><th class="num">互动</th><th class="num">表现</th><th class="num">最终得分</th></tr></thead>
-          <tbody id="histBody"><tr><td colspan="7" class="empty">暂无归档</td></tr></tbody>
-        </table>
-      </div>
+      <div id="histList" class="empty">暂无归档</div>
     </details>
     <details>
       <summary>中转服务器设置</summary>
@@ -2935,6 +2931,16 @@ function cloudRenderNow(){
     if (st.trim.k > 0) html += `<tr><td colspan="6" class="empty" style="padding:6px 10px">去极值前全员平均：${fmt(st.rawAvg)} 分（已去掉 ${st.trim.dropped.map(d=>esc(d.j.label)+' '+fmt(d.j.total)+'（'+d.tag+'）').join('、')}）</td></tr>`;
   }
   $('#liveBody').innerHTML = html || `<tr><td colspan="6" class="empty">还没有人提交</td></tr>`;
+  /* 评语列表：谁给了多少分、说了什么 */
+  const withCmt = judgeList().filter(j => (j.comment || '').trim());
+  withCmt.sort((a,b) => (b.total||0) - (a.total||0));
+  $('#commentCount').textContent = withCmt.length;
+  $('#commentList').innerHTML = withCmt.length
+    ? '<div class="tipline" style="margin:0 0 6px">💬 评语明细（按总分从高到低）</div>'
+      + withCmt.map(j=>`<div style="padding:7px 0;border-top:1px dashed var(--line);font-size:13px;line-height:1.5">
+          <b>${esc(j.label)}</b> <span style="color:var(--muted)">${fmt(j.total)} 分${st.trim.droppedIds.has(j.uid) ? '（'+((st.trim.dropped.find(d=>d.j.uid===j.uid)||{}).tag||'')+'·不计入）' : ''}</span><br>
+          <span>${esc(j.comment)}</span></div>`).join('')
+    : '';
   $('#liveStats').innerHTML = list.length
     ? `<div>已提交 <b>${st.count}</b> 人</div><div>🏆 最终得分 <b>${fmt(st.final)}</b> / 10（${st.trim.rule}）</div>`
       + `<div>全员平均 <b>${fmt(st.rawAvg)}</b></div><div>当前演讲人 <b>${esc(st.speaker)||'未设置'}</b></div>`
@@ -2948,13 +2954,30 @@ function cloudRenderNow(){
 
   const hist = cloud.history || [];
   $('#histCount').textContent = hist.length ? hist.length + ' 场' : '';
-  $('#histBody').innerHTML = hist.length ? hist.slice().reverse().map(h=>`<tr>
-      <td>${esc(h.speaker)}<br><small style="color:var(--muted)">${esc(h.rule||'')}${h.rawAvg!==undefined?' · 全员 '+fmt(h.rawAvg):''}</small></td>
-      <td class="num">${h.count}</td>
-      <td class="num">${fmt(h.avg.content)}</td><td class="num">${fmt(h.avg.language)}</td>
-      <td class="num">${fmt(h.avg.interaction)}</td><td class="num">${fmt(h.avg.delivery)}</td>
-      <td class="num"><b>${fmt(h.final!==undefined?h.final:h.totalAvg)}</b></td></tr>`).join('')
-    : `<tr><td colspan="7" class="empty">暂无归档</td></tr>`;
+  const hl = $('#histList');
+  if (hl){
+    hl.className = hist.length ? '' : 'empty';
+    hl.innerHTML = hist.length ? hist.slice().reverse().map((h, idx)=>{
+      const judges = h.judges || {};
+      const names = Object.keys(judges);
+      const dropIds = new Set((h.dropped || []).map(d => d.label));
+      const detail = names.sort((a,b)=>(judges[b].total||0)-(judges[a].total||0)).map(n=>{
+        const j = judges[n] || {};
+        const isDrop = dropIds.has(n);
+        const cmt = (j.comment || '').trim();
+        return `<div style="padding:6px 0;border-top:1px dashed var(--line);font-size:13px">
+            <b>${esc(n)}</b> <span style="color:var(--muted)">${fmt(j.total)} 分${isDrop ? '（不计入）' : ''}</span>
+            ${cmt ? '<br><span>' + esc(cmt) + '</span>' : '<span style="color:var(--muted)">（无评语）</span>'}
+          </div>`;
+      }).join('');
+      return `<details style="border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px">
+          <summary><b>${esc(h.speaker)}</b> ｜ ${h.count} 人 ｜ 最终 <b>${fmt(h.final!==undefined?h.final:h.totalAvg)}</b>
+            <span style="color:var(--muted);font-weight:400">（${esc(h.rule||'')}${h.rawAvg!==undefined?' · 全员 '+fmt(h.rawAvg):''}）</span></summary>
+          <div class="tipline" style="margin:6px 0 2px">各项平均：内容 ${fmt(h.avg.content)} ｜ 语言 ${fmt(h.avg.language)} ｜ 互动 ${fmt(h.avg.interaction)} ｜ 表现 ${fmt(h.avg.delivery)}</div>
+          ${detail}
+        </details>`;
+    }).join('') : '暂无归档';
+  }
 
   /* 房主信息与权限提示 */
   const own = isOwner();
@@ -3193,16 +3216,19 @@ $('#copyLink').addEventListener('click', ()=>{
 $('#qrRefresh').addEventListener('click', ()=>{ renderQR(); toast('二维码已刷新'); });
 $('#siteUrl').addEventListener('change', renderQR);
 $('#exportNet').addEventListener('click', ()=>{
-  const rows = [['演讲人','评委人数','内容','语言','互动','表现','最终得分(去极值)','去极值规则','全员平均(参考)','被去掉的评委','评委明细']];
+  const rows = [['演讲人','评委人数','内容','语言','互动','表现','最终得分(去极值)','去极值规则','全员平均(参考)','被去掉的评委','评委明细','评语汇总']];
   (cloud.history||[]).forEach(h=>rows.push([h.speaker, h.count, fmt(h.avg.content), fmt(h.avg.language),
     fmt(h.avg.interaction), fmt(h.avg.delivery), fmt(h.final!==undefined?h.final:h.totalAvg), h.rule||'',
     h.rawAvg!==undefined?fmt(h.rawAvg):'', (h.dropped||[]).map(d=>d.label+' '+fmt(d.total)+'('+d.tag+')').join(' '),
-    Object.keys(h.judges||{}).map(k=>k+':'+fmt(h.judges[k].total)).join(' ')]));
+    Object.keys(h.judges||{}).map(k=>k+':'+fmt(h.judges[k].total)).join(' '),
+    Object.keys(h.judges||{}).filter(k=>(h.judges[k].comment||'').trim())
+      .map(k=>k+'：'+String(h.judges[k].comment).replace(/[\r\n]+/g,' ')).join(' ｜ ')]));
   const st = cloudSummary();
   if (st.count) rows.push([st.speaker||'(进行中)', st.count, fmt(st.avg.content), fmt(st.avg.language),
     fmt(st.avg.interaction), fmt(st.avg.delivery), fmt(st.final), st.trim.rule, fmt(st.rawAvg),
     st.trim.dropped.map(d=>d.j.label+' '+fmt(d.j.total)+'('+d.tag+')').join(' '),
-    judgeList().map(j=>j.label+':'+fmt(j.total)).join(' ')]);
+    judgeList().map(j=>j.label+':'+fmt(j.total)).join(' '),
+    judgeList().filter(j=>(j.comment||'').trim()).map(j=>j.label+'：'+String(j.comment).replace(/[\r\n]+/g,' ')).join(' ｜ ')]);
   if (rows.length < 2) return toast('暂无数据可导出');
   download(rows.map(r=>r.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\r\n'),
            '英语演讲评分汇总_' + new Date().toISOString().slice(0,10) + '.csv');
