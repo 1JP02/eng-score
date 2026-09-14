@@ -40,14 +40,16 @@
   .tipline{font-size:12px;color:var(--muted);margin:8px 0 0}
   .roombar{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:12px;color:var(--muted);margin:-2px 0 12px;padding-bottom:10px;border-bottom:1px dashed var(--line)}
   .roombar b{color:var(--ink);font-size:13px}
-  .row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px 10px;padding:11px 0;border-bottom:1px solid var(--line)}
   .row:last-child{border-bottom:0}
   .row .nm{font-weight:700;font-size:16px}
   .row .nm small{display:block;font-weight:400;color:var(--muted);font-size:11px}
   .stepper{display:flex;align-items:center;gap:8px}
   .stepper button{width:46px;height:46px;padding:0;font-size:22px;font-weight:700;border-radius:14px}
-  .stepper input{width:78px;text-align:center;font-size:22px;font-weight:800;color:var(--brand);border:1.5px solid var(--brand);background:rgba(47,107,255,.06);padding:6px 4px;font-variant-numeric:tabular-nums}
+  .stepper input{width:88px;text-align:center;font-size:22px;font-weight:800;color:var(--brand);border:1.5px solid var(--brand);background:rgba(47,107,255,.06);padding:6px 4px;font-variant-numeric:tabular-nums}
   .stepper .of{color:var(--muted);font-size:12px;min-width:34px}
+  .rng{grid-column:1 / -1;width:100%;height:26px;margin:0;accent-color:var(--brand);cursor:pointer}
+  .rng:disabled{cursor:default;opacity:.55}
   .total{display:flex;align-items:center;gap:14px}
   .total .num{font-size:44px;font-weight:800;line-height:1;color:var(--brand);font-variant-numeric:tabular-nums}
   .total .num small{font-size:14px;color:var(--muted);font-weight:600}
@@ -86,13 +88,21 @@
   .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(16px);opacity:0;background:#161d2e;color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;transition:.22s;pointer-events:none;z-index:20;max-width:90vw;text-align:center}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   @media print{ .submitbar,.actions,.toast,details{display:none !important} .card{break-inside:avoid} }
+  /* 窄屏（手机）把打分控件收紧一点，四个要点都放得下 */
+  @media (max-width:430px){
+    .stepper{gap:6px}
+    .stepper button{width:42px;height:42px;font-size:20px;border-radius:12px}
+    .stepper input{width:72px;font-size:20px;padding:6px 2px}
+    .stepper .of{display:none}
+    .total .num{font-size:38px}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1>英语 Presentation 评分</h1>
-    <p>内容 3 · 语言 3 · 互动 1 · 表现 3 ｜ 满分 10 分</p>
+    <p>内容 100×30% · 语言 100×30% · 互动 100×10% · 表现 100×30% ｜ 加权后满分 10 分</p>
   </header>
 
   <section class="card" id="joinCard">
@@ -129,6 +139,7 @@
     </div>
 
     <div id="scoreRows"></div>
+    <p class="tipline">每个要点按 <b>百分制 0-100</b> 打分：<b>拖滑块</b>最快，也可点 <b>−/＋</b>（每次 5 分）或直接输入数字。<br>总分 =（内容×30% + 语言×30% + 互动×10% + 表现×30%）÷10，<b>满分 10 分</b>。</p>
 
     <div class="actions" style="margin-top:12px">
       <button id="cloudPush" class="primary big">提交我的评分</button>
@@ -144,7 +155,7 @@
       <summary>其他评委的分数与评语（<span id="boardCount">0</span> 人 · <span id="commentCount">0</span> 条评语）</summary>
       <div class="tablewrap">
         <table>
-          <thead><tr><th>评委</th><th class="num">内容</th><th class="num">语言</th><th class="num">互动</th><th class="num">表现</th><th class="num">总分</th></tr></thead>
+          <thead><tr><th>评委</th><th class="num">内容<br><small>/100</small></th><th class="num">语言<br><small>/100</small></th><th class="num">互动<br><small>/100</small></th><th class="num">表现<br><small>/100</small></th><th class="num">总分<br><small>/10</small></th></tr></thead>
           <tbody id="liveBody"><tr><td colspan="6" class="empty">还没有人提交</td></tr></tbody>
         </table>
       </div>
@@ -207,17 +218,18 @@
     <div style="margin-top:10px">
       <div class="tablewrap">
         <table>
-          <thead><tr><th>评分项</th><th>满分</th><th>优秀</th><th>合格</th><th>待提高</th></tr></thead>
+          <thead><tr><th>评分项</th><th>满分</th><th>权重</th><th>优秀</th><th>合格</th><th>待提高</th></tr></thead>
           <tbody>
-            <tr><td>内容 Content</td><td>3</td><td>主题明确、结构清晰、论据充分</td><td>基本切题但较浅</td><td>跑题或内容单薄</td></tr>
-            <tr><td>语言 Language</td><td>3</td><td>发音自然、语法准确、用词地道</td><td>错误较多但能听懂</td><td>影响理解</td></tr>
-            <tr><td>互动 Interaction</td><td>1</td><td>主动提问/回应，眼神交流充分</td><td>互动较少</td><td>全程念稿无互动</td></tr>
-            <tr><td>表现 Delivery</td><td>3</td><td>自信从容、时间把控好、PPT 配合默契</td><td>略紧张或超时</td><td>紧张、严重超时</td></tr>
+            <tr><td>内容 Content</td><td>100</td><td>30%</td><td>主题明确、结构清晰、论据充分</td><td>基本切题但较浅</td><td>跑题或内容单薄</td></tr>
+            <tr><td>语言 Language</td><td>100</td><td>30%</td><td>发音自然、语法准确、用词地道</td><td>错误较多但能听懂</td><td>影响理解</td></tr>
+            <tr><td>互动 Interaction</td><td>100</td><td>10%</td><td>主动提问/回应，眼神交流充分</td><td>互动较少</td><td>全程念稿无互动</td></tr>
+            <tr><td>表现 Delivery</td><td>100</td><td>30%</td><td>自信从容、时间把控好、PPT 配合默契</td><td>略紧张或超时</td><td>紧张、严重超时</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="tipline">打分栏可输入 0 ~ 满分（步长 0.5，超出自动修正）。等级：≥9 优秀 ｜ 8-8.9 良好 ｜ 6-7.9 合格 ｜ 小于 6 待提高</p>
-      <p class="tipline"><b>最终得分算法（简单平均）</b>：把每位评委的分数直接相加再除以评委人数，所有评委的分数都计入（不去最高分、也不去最低分）。</p>
+      <p class="tipline">每个要点都是<b>百分制（0 ~ 100 的整数）</b>：拖滑块最快，也可以点 <b>−/＋</b>（每次 5 分）或直接输入数字。<br>参考线：<b>90-100</b> 优秀 ｜ <b>80-89</b> 良好 ｜ <b>70-79</b> 合格 ｜ <b>60-69</b> 待提高 ｜ <b>60 以下</b> 明显不足</p>
+      <p class="tipline"><b>总分怎么来（满分 10 分）</b>：内容×30% ＋ 语言×30% ＋ 互动×10% ＋ 表现×30% ＝ 百分制加权分，再 <b>÷10</b> 就是你的 10 分制总分。<br>例：内容 90、语言 80、互动 70、表现 85 → 90×30%+80×30%+70×10%+85×30% = 83.5 → 总分 <b>8.35</b></p>
+      <p class="tipline"><b>最终得分</b>：全班每位评委给出的 10 分制总分取平均（保留 2 位小数），所有评委的分数都算数。</p>
     </div>
   </details>
 
@@ -2645,11 +2657,12 @@ var qrcode = function() {
 </script>
 <script>
 /* ================= 基础 ================= */
+/* 每个要点百分制（0-100），按权重加权后再折算成 10 分制 */
 const ITEMS = [
-  { key:'content',     zh:'内容', en:'Content',     max:3 },
-  { key:'language',    zh:'语言', en:'Language',    max:3 },
-  { key:'interaction', zh:'互动', en:'Interaction', max:1 },
-  { key:'delivery',    zh:'表现', en:'Delivery',    max:3 }
+  { key:'content',     zh:'内容', en:'Content',     max:100, w:30 },
+  { key:'language',    zh:'语言', en:'Language',    max:100, w:30 },
+  { key:'interaction', zh:'互动', en:'Interaction', max:100, w:10 },
+  { key:'delivery',    zh:'表现', en:'Delivery',    max:100, w:30 }
 ];
 const state = { content:0, language:0, interaction:0, delivery:0 };
 let cloud = { on:false, mq:null, srv:'wss://broker.hivemq.com:8884/mqtt', room:'', name:'', uid:'',
@@ -2662,7 +2675,13 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = n => (Math.round((+n||0)*10)/10).toFixed(1).replace(/\.0$/,'');
 const fmt2 = n => (Math.round((+n||0)*100)/100).toFixed(2).replace(/\.?0+$/,'');   // 平均分用两位小数（8.83）
-const total = () => ITEMS.reduce((s,i)=>s+state[i.key],0);
+/* 加权：Σ(要点分 × 权重) ÷ 1000 → 满分 10 分（各要点满分 100） */
+const WSUM = ITEMS.reduce((s,i)=>s+i.w, 0);                 // 100
+const weightedTotal = sc => {
+  const v = ITEMS.reduce((a,i)=>a + (+((sc||{})[i.key]) || 0) * i.w, 0) / 1000;
+  return Math.round(v * 100) / 100;
+};
+const total = () => weightedTotal(state);
 const gradeOf = t => t>=9?['优秀','#e3f7ec','#0b7a41']:t>=8?['良好','#e3f7ec','#0b7a41']:t>=6?['合格','#fdf3e0','#8a5b00']:['待提高','#fdeaea','#b3232b'];
 let toastTimer = null;
 function toast(msg){
@@ -2689,21 +2708,24 @@ function download(csv, filename){
 /* ================= 评分界面 ================= */
 document.getElementById('scoreRows').innerHTML = ITEMS.map(it=>`
   <div class="row">
-    <div class="nm">${it.zh}<small>${it.en} · 满分 ${it.max}</small></div>
+    <div class="nm">${it.zh}<small>${it.en} · 百分制 0-100 · 权重 ${it.w}%</small></div>
     <div class="stepper">
-      <button data-d="-0.5" data-k="${it.key}">−</button>
-      <input type="number" id="n-${it.key}" min="0" max="${it.max}" step="0.5" value="0" inputmode="decimal">
-      <button data-d="0.5" data-k="${it.key}">+</button>
-      <span class="of">/ ${it.max}</span>
+      <button data-d="-5" data-k="${it.key}">−</button>
+      <input type="number" id="n-${it.key}" min="0" max="100" step="1" value="0" inputmode="numeric">
+      <button data-d="5" data-k="${it.key}">+</button>
+      <span class="of">/100</span>
     </div>
+    <input type="range" class="rng" id="r-${it.key}" min="0" max="100" step="1" value="0" aria-label="${it.zh}">
   </div>`).join('');
 function setScore(k, v, typing){
   const it = ITEMS.find(i=>i.key===k);
   let n = Number(v); if (!isFinite(n)) n = 0;
-  n = Math.max(0, Math.min(it.max, Math.round(n*2)/2));
+  n = Math.max(0, Math.min(it.max, Math.round(n)));      // 百分制：整数，0-100
   state[k] = n;
   const el = document.getElementById('n-'+k);
   if (el && !typing && Number(el.value) !== n) el.value = n;
+  const rg = document.getElementById('r-'+k);
+  if (rg && Number(rg.value) !== n) rg.value = n;
   paint();
 }
 ITEMS.forEach(it=>{
@@ -2712,22 +2734,27 @@ ITEMS.forEach(it=>{
   el.addEventListener('blur', ()=>{ if (isLocked()){ el.value = state[it.key]; return; } setScore(it.key, el.value); });
   el.addEventListener('keydown', e=>{
     if (e.key === 'Enter'){ e.preventDefault(); el.blur(); }
-    else if (e.key === 'ArrowUp'){ e.preventDefault(); if (!isLocked()) setScore(it.key, state[it.key] + 0.5); }
-    else if (e.key === 'ArrowDown'){ e.preventDefault(); if (!isLocked()) setScore(it.key, state[it.key] - 0.5); }
+    else if (e.key === 'ArrowUp'){ e.preventDefault(); if (!isLocked()) setScore(it.key, state[it.key] + 1); }
+    else if (e.key === 'ArrowDown'){ e.preventDefault(); if (!isLocked()) setScore(it.key, state[it.key] - 1); }
   });
+  const rg = document.getElementById('r-'+it.key);
+  if (rg) rg.addEventListener('input', ()=>{ if (isLocked()){ rg.value = state[it.key]; return; } setScore(it.key, rg.value); });
 });
 document.querySelectorAll('.stepper button').forEach(b=>{
   b.addEventListener('click', ()=>{ if (isLocked()) return; setScore(b.dataset.k, state[b.dataset.k] + parseFloat(b.dataset.d)); });
 });
 function paint(){
-  ITEMS.forEach(it=>{ const el = document.getElementById('n-'+it.key); if (el && Number(el.value) !== state[it.key]) el.value = state[it.key]; });
+  ITEMS.forEach(it=>{
+    const el = document.getElementById('n-'+it.key); if (el && Number(el.value) !== state[it.key]) el.value = state[it.key];
+    const rg = document.getElementById('r-'+it.key); if (rg && Number(rg.value) !== state[it.key]) rg.value = state[it.key];
+  });
   const t = total(), g = gradeOf(t);
-  $('#total').textContent = fmt(t);
-  $('#mbTotal').textContent = fmt(t);
+  $('#total').textContent = fmt2(t);
+  $('#mbTotal').textContent = fmt2(t);
   $('#barFill').style.width = (t*10) + '%';
   const badge = $('#grade');
   badge.textContent = g[0]; badge.style.background = g[1]; badge.style.color = g[2];
-  $('#breakdown').textContent = ITEMS.map(i=>i.zh + ' ' + fmt(state[i.key]) + '/' + i.max).join('　·　');
+  $('#breakdown').textContent = ITEMS.map(i=>i.zh + ' ' + fmt2(state[i.key]) + '/100').join('　·　');
 }
 
 /* ================= 云端联机 ================= */
@@ -2826,9 +2853,8 @@ function cloudOnMessage(topic, payload){
     cloud.ctrl = { speaker: o.speaker||'', topic: o.topic||'', round: +o.round||0 };
   } else if (kind === 'score'){
     const u = o.uid || uid, sc = o.scores || {};
-    const t = ITEMS.reduce((a,i)=>a + (+sc[i.key] || 0), 0);
     const incoming = { name: o.judge||'评委', scores: sc, comment: o.comment||'',
-                       total: Math.round(t*100)/100, ts: o.ts||0, round: +o.round||0 };
+                       total: weightedTotal(sc), ts: o.ts||0, round: +o.round||0 };
     const prev = cloud.byUid[u];
     if (prev && (prev.round||0) === incoming.round && (prev.ts||0) <= (incoming.ts||0)){
       return;                       // 同一场重复提交：保留第一次，忽略后来的
@@ -2884,7 +2910,7 @@ function cloudRenderNow(){
   $('#mbWho').textContent = cloud.name ? ('我是 ' + cloud.name) : '—';
   const lockedNow = isLocked();
   $('#mbInfo').textContent = cloud.on
-    ? (lockedNow ? ('已提交 ' + fmt(myEntry().total) + ' 分，等待下一位')
+    ? (lockedNow ? ('已提交 ' + fmt2(myEntry().total) + ' 分，等待下一位')
                  : ((st.count ? (st.count + ' 人已交 · 最终 ' + fmt2(st.final)) : '等待提交') + (st.speaker ? ' · ' + st.speaker : '')))
     : '未连接';
 
@@ -2895,13 +2921,15 @@ function cloudRenderNow(){
       <td>${esc(j.label)}${j.uid === cloud.uid ? ' <span class="badge on">我</span>' : ''}</td>
       <td class="num">${fmt((j.scores||{}).content)}</td><td class="num">${fmt((j.scores||{}).language)}</td>
       <td class="num">${fmt((j.scores||{}).interaction)}</td><td class="num">${fmt((j.scores||{}).delivery)}</td>
-      <td class="num"><b>${fmt(j.total)}</b></td></tr>`;
+      <td class="num"><b>${fmt2(j.total)}</b></td></tr>`;
   }).join('');
   if (list.length){
     html += `<tr class="avgrow"><td>🏆 最终得分（${st.count} 人平均）</td>
       <td class="num">${fmt2(st.avg.content)}</td><td class="num">${fmt2(st.avg.language)}</td>
       <td class="num">${fmt2(st.avg.interaction)}</td><td class="num">${fmt2(st.avg.delivery)}</td>
       <td class="num">${fmt2(st.final)}</td></tr>`;
+    const contrib = ITEMS.map(i=>i.zh + ' ' + fmt2(st.avg[i.key] * i.w / 1000)).join(' ｜ ');
+    html += `<tr><td colspan="6" class="empty" style="padding:6px 10px">加权后（满分 10）：${contrib}　→ 合计 ${fmt2(st.final)}　·　权重 内容 30% ／ 语言 30% ／ 互动 10% ／ 表现 30%（合计 ${WSUM}%）</td></tr>`;
   }
   $('#liveBody').innerHTML = html || `<tr><td colspan="6" class="empty">还没有人提交</td></tr>`;
   /* 评语列表：谁给了多少分、说了什么 */
@@ -2911,11 +2939,11 @@ function cloudRenderNow(){
   $('#commentList').innerHTML = withCmt.length
     ? '<div class="tipline" style="margin:0 0 6px">💬 评语明细（按总分从高到低）</div>'
       + withCmt.map(j=>`<div style="padding:7px 0;border-top:1px dashed var(--line);font-size:13px;line-height:1.5">
-          <b>${esc(j.label)}</b> <span style="color:var(--muted)">${fmt(j.total)} 分</span><br>
+          <b>${esc(j.label)}</b> <span style="color:var(--muted)">${fmt2(j.total)} 分</span><br>
           <span>${esc(j.comment)}</span></div>`).join('')
     : '';
   $('#liveStats').innerHTML = list.length
-    ? `<div>已提交 <b>${st.count}</b> 人</div><div>🏆 最终得分 <b>${fmt2(st.final)}</b> / 10（全部评委平均）</div>`
+    ? `<div>已提交 <b>${st.count}</b> 人</div><div>🏆 最终得分 <b>${fmt2(st.final)}</b> / 10（加权平均）</div>`
       + `<div>当前演讲人 <b>${esc(st.speaker)||'未设置'}</b></div>`
     : '';
 
@@ -2937,14 +2965,14 @@ function cloudRenderNow(){
         const j = judges[n] || {};
         const cmt = (j.comment || '').trim();
         return `<div style="padding:6px 0;border-top:1px dashed var(--line);font-size:13px">
-            <b>${esc(n)}</b> <span style="color:var(--muted)">${fmt(j.total)} 分</span>
+            <b>${esc(n)}</b> <span style="color:var(--muted)">${fmt2(j.total)} 分</span>
             ${cmt ? '<br><span>' + esc(cmt) + '</span>' : '<span style="color:var(--muted)">（无评语）</span>'}
           </div>`;
       }).join('');
       return `<details style="border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px">
           <summary><b>${esc(h.speaker)}</b> ｜ ${h.count} 人 ｜ 最终 <b>${fmt2(h.final!==undefined?h.final:h.totalAvg)}</b>
-            <span style="color:var(--muted);font-weight:400">（全部评委平均）</span></summary>
-          <div class="tipline" style="margin:6px 0 2px">各项平均：内容 ${fmt2(h.avg.content)} ｜ 语言 ${fmt2(h.avg.language)} ｜ 互动 ${fmt2(h.avg.interaction)} ｜ 表现 ${fmt2(h.avg.delivery)}</div>
+            <span style="color:var(--muted);font-weight:400">（加权平均 ÷10）</span></summary>
+          <div class="tipline" style="margin:6px 0 2px">各项平均（百分制）：内容 ${fmt2(h.avg.content)} ｜ 语言 ${fmt2(h.avg.language)} ｜ 互动 ${fmt2(h.avg.interaction)} ｜ 表现 ${fmt2(h.avg.delivery)}　·　加权后合计 ${fmt2(h.final!==undefined?h.final:h.totalAvg)}</div>
           ${detail}
         </details>`;
     }).join('') : '暂无归档';
@@ -3062,8 +3090,8 @@ function cloudSubmit(){
   if (!cloud.name) assignName();
   if (isLocked()) return toast('本场你已经提交过了，不能重复提交');
   const t0 = total();
-  const detail = ITEMS.map(i=>i.zh + ' ' + fmt(state[i.key]) + '/' + i.max).join('　');
-  const msg = '确认提交本场评分？\n\n' + detail + '\n总分：' + fmt(t0) + ' / 10\n\n'
+  const detail = ITEMS.map(i=>i.zh + ' ' + fmt2(state[i.key]) + '/100（占 ' + i.w + '%）').join('\n');
+  const msg = '确认提交本场评分？\n\n' + detail + '\n\n加权总分：' + fmt2(t0) + ' / 10\n（' + ITEMS.map(i=>fmt2(state[i.key]) + '×' + i.w + '%').join(' + ') + '）\n\n'
     + (t0 === 0 ? '⚠ 你还没有打分（0 分）！\n\n' : '')
     + '提交后本场不能修改，也不能重复提交。';
   if (!confirm(msg)) { toast('已取消提交'); return; }
@@ -3074,7 +3102,7 @@ function cloudSubmit(){
   cloud.lastMsgAt = Date.now();
   cloudRenderNow();                     // 立即反馈：立刻锁定并显示我的分数
   cloud.mq.publish(tScore(cloud.uid), JSON.stringify(payload), true);
-  toast('已提交：' + fmt(total()) + ' 分（本场不可再改）');
+  toast('已提交：' + fmt2(total()) + ' 分（本场不可再改）');
 }
 $('#cloudJoin').addEventListener('click', ()=>{
   const code = normalizeRoom($('#cloudRoom').value);
