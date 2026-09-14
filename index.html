@@ -2921,7 +2921,9 @@ function cloudOnMessage(topic, payload){
     if (payload === '') cloud.owner = null;
     else cloud.owner = { uid: o.uid || uid, name: o.name || '房主', ts: o.ts || 0 };
   } else if (kind === 'who'){
-    cloud.who[o.uid || uid] = { name: o.name||'', ts: o.ts||0 };
+    const wts = o.ts || 0;
+    if (wts && (Date.now() - wts) > 6 * 3600 * 1000) return;      // 超过 6 小时的名册视为过期，丢弃
+    cloud.who[o.uid || uid] = { name: o.name||'', ts: wts };
   } else if (kind === 'hist' && o.id){
     if (!cloud.history.some(h=>h.id === o.id)) cloud.history.push(o);
   }
@@ -2936,7 +2938,14 @@ function cloudSetButtons(){
   });
   ['cloudJoin','cloudNew'].forEach(id=>{ const el=$('#'+id); if (el) el.disabled = on || cloud.connecting; });
 }
+/* 高频消息合并：无论一秒内收到多少条消息，最多每 180ms 重绘一次 */
+let renderPending = false;
 function cloudRender(){
+  if (renderPending) return;
+  renderPending = true;
+  setTimeout(()=>{ renderPending = false; cloudRenderNow(); }, 180);
+}
+function cloudRenderNow(){
   if (cloud.autoNamed && cloud.on) assignName();
   const st = cloudSummary();
   if (net.round !== null && st.round !== net.round){
@@ -3035,9 +3044,10 @@ function cloudConnect(first){
     startWatch();
     if (first){
       toast('已加入房间 ' + cloud.room);
-      const stagger = 400 + Math.floor(Math.random()*800);
+      const online = Object.keys(cloud.who).length;
+      const stagger = 250 + Math.floor(Math.random()*700) + Math.min(online, 60) * 18;   // 人越多越靠后，避免撞名
       setTimeout(()=>{ if (cloud.name){ cloud.autoNamed = false; publishWho(); } else { assignName(); } cloudRender(); }, stagger);
-      setTimeout(()=>{ assignName(); cloudRender(); }, stagger + 1300);
+      setTimeout(()=>{ if (cloud.autoNamed) assignName(); publishWho(); cloudRender(); }, stagger + 1400 + Math.min(online, 60) * 12);
     } else {
       publishWho();
       toast('已重新同步');
@@ -3048,7 +3058,7 @@ function cloudRetry(){
   cloud.on = false; cloud.connecting = false;
   if (cloud.watchTimer){ clearInterval(cloud.watchTimer); cloud.watchTimer = null; }
   if (cloud.manualStop || !cloud.room) return;
-  const wait = Math.min(800 * Math.pow(1.7, cloud.retry||0), 8000);
+  const wait = Math.min(800 * Math.pow(1.7, cloud.retry||0), 8000) * (0.6 + Math.random() * 0.8);
   cloud.retry = (cloud.retry||0) + 1;
   const badge = $('#cloudState');
   badge.textContent = '重连中…'; badge.className = 'badge off';
@@ -3210,6 +3220,9 @@ function inviteText(){
 function renderQR(){
   const box = $('#qrBox'); if (!box) return;
   const url = joinUrl();
+  const key = url + '|' + (document.querySelector('#siteUrl') ? document.querySelector('#siteUrl').value : '');
+  if (box.dataset.key === key) return;              // 没变化就不重算（省 CPU）
+  box.dataset.key = key;
   if (!url){ box.innerHTML = '<div style="color:#6b7691;font-size:12px;padding:14px;width:120px">先加入房间<br>才会生成二维码</div>'; return; }
   try {
     const qr = qrcode(0, 'M');           // 版本 0 = 自动
