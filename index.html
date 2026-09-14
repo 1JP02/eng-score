@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>英语 Presentation 评分</title>
+<style>
+  :root{
+    --bg:#f2f5fa; --card:#fff; --ink:#161d2e; --muted:#6b7691; --line:#e3e8f2;
+    --brand:#2f6bff; --brand2:#7aa2ff; --ok:#0f9d58; --warn:#e08a00; --bad:#e5484d;
+    --radius:16px; --shadow:0 2px 12px rgba(20,35,70,.07);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#101319; --card:#191e29; --ink:#e9eefb; --muted:#98a3bd; --line:#28303f; --shadow:0 2px 12px rgba(0,0,0,.4); }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft YaHei",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.55;font-size:15px}
+  .wrap{max-width:680px;margin:0 auto;padding:14px 12px 100px}
+  header{padding:2px 4px 12px}
+  header h1{margin:0;font-size:19px;letter-spacing:.2px}
+  header p{margin:2px 0 0;color:var(--muted);font-size:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:12px}
+  h2{font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:2px}
+  input,textarea{width:100%;padding:11px 12px;font:inherit;font-size:16px;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:12px;outline:none}
+  input:focus,textarea:focus{border-color:var(--brand)}
+  textarea{resize:vertical;min-height:56px;font-size:15px}
+  .grid{display:grid;gap:10px}
+  button{font:inherit;font-size:15px;padding:11px 16px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;transition:.15s}
+  button:hover{border-color:var(--brand);color:var(--brand)}
+  button.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
+  button.primary:hover{filter:brightness(1.07);color:#fff}
+  button.big{width:100%;padding:15px;font-size:17px}
+  button.danger:hover{border-color:var(--bad);color:var(--bad)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;background:var(--line);color:var(--muted)}
+  .badge.on{background:#e3f7ec;color:#0b7a41}
+  .badge.off{background:#fdeaea;color:#b3232b}
+  .tipline{font-size:12px;color:var(--muted);margin:8px 0 0}
+  .roombar{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:12px;color:var(--muted);margin:-2px 0 12px;padding-bottom:10px;border-bottom:1px dashed var(--line)}
+  .roombar b{color:var(--ink);font-size:13px}
+  .row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:0}
+  .row .nm{font-weight:700;font-size:16px}
+  .row .nm small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+  .stepper{display:flex;align-items:center;gap:8px}
+  .stepper button{width:46px;height:46px;padding:0;font-size:22px;font-weight:700;border-radius:14px}
+  .stepper input{width:78px;text-align:center;font-size:22px;font-weight:800;color:var(--brand);border:1.5px solid var(--brand);background:rgba(47,107,255,.06);padding:6px 4px;font-variant-numeric:tabular-nums}
+  .stepper .of{color:var(--muted);font-size:12px;min-width:34px}
+  .total{display:flex;align-items:center;gap:14px}
+  .total .num{font-size:44px;font-weight:800;line-height:1;color:var(--brand);font-variant-numeric:tabular-nums}
+  .total .num small{font-size:14px;color:var(--muted);font-weight:600}
+  .total .meta{flex:1;min-width:0}
+  .bar{height:10px;border-radius:99px;background:var(--line);overflow:hidden;margin-bottom:6px}
+  .bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--brand),var(--brand2));transition:width .2s}
+  .grade{display:inline-block;padding:2px 11px;border-radius:99px;font-size:12px;font-weight:700;background:#eef2ff;color:#3346a8}
+  .brk{font-size:11px;color:var(--muted);margin-top:5px}
+  .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:12px;margin-top:8px}
+  table{border-collapse:collapse;width:100%;font-size:13px;min-width:520px}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+  th{background:rgba(47,107,255,.06);color:var(--muted);font-size:11px;font-weight:700}
+  tr:last-child td{border-bottom:0}
+  td.num,th.num{text-align:center;font-variant-numeric:tabular-nums}
+  .avgrow td{background:rgba(15,157,88,.08);font-weight:700}
+  .empty{color:var(--muted);font-size:12px;padding:12px 4px}
+  .stats{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted);margin-top:8px}
+  .stats b{color:var(--ink);font-size:14px}
+  details{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
+  details:first-of-type{border-top:0;margin-top:0;padding-top:0}
+  summary{cursor:pointer;font-weight:700;font-size:14px;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"▸ ";color:var(--muted)}
+  details[open] summary::before{content:"▾ "}
+  .btnrow{display:flex;gap:6px}
+  .btnrow button{padding:3px 9px;font-size:12px}
+  .submitbar{position:fixed;left:0;right:0;bottom:0;z-index:9;display:none;align-items:center;gap:12px;padding:11px 14px;background:var(--card);border-top:1px solid var(--line);box-shadow:0 -4px 16px rgba(20,35,70,.10)}
+  body.connected .submitbar{display:flex}
+  .submitbar .n{font-size:26px;font-weight:800;color:var(--brand);font-variant-numeric:tabular-nums}
+  .submitbar .n span{font-size:12px;color:var(--muted)}
+  .submitbar .who{flex:1;min-width:0;font-size:12px;color:var(--muted)}
+  .submitbar .who b{display:block;color:var(--ink);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .submitbar button{padding:13px 20px;font-size:16px;flex:0 0 auto}
+  body:not(.connected) #judgeCard{display:none}
+  body.connected #joinCard{display:none}
+  .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(16px);opacity:0;background:#161d2e;color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;transition:.22s;pointer-events:none;z-index:20;max-width:90vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media print{ .submitbar,.actions,.toast,details{display:none !important} .card{break-inside:avoid} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>英语 Presentation 评分</h1>
+    <p>内容 3 · 语言 3 · 互动 1 · 表现 3 ｜ 满分 10 分</p>
+  </header>
+
+  <section class="card" id="joinCard">
+    <h2>加入评分房间 <span id="cloudState" class="badge">未连接</span></h2>
+    <div class="grid">
+      <div>
+        <label>房间码（主持人发在群里的那串）</label>
+        <input id="cloudRoom" placeholder="粘贴房间码" autocomplete="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div>
+        <label>我的名字（可留空，自动分配且不重名）</label>
+        <input id="cloudName" placeholder="例：张三 / 第3组" autocomplete="off">
+      </div>
+    </div>
+    <div class="actions">
+      <button id="cloudJoin" class="primary big">加入并开始打分</button>
+    </div>
+    <p class="tipline">需要连网（校园网 / 手机流量都行），不需要和主持人连同一个 Wi-Fi。</p>
+
+    <details style="margin-top:12px">
+      <summary>主持人：新建房间</summary>
+      <p class="tipline">新建后把房间码发到班级群，并把本文件一起发出去。</p>
+      <div class="actions"><button id="cloudNew" class="primary">新建房间并连接</button></div>
+    </details>
+  </section>
+
+  <section class="card" id="judgeCard">
+    <div class="roombar">
+      <span>房间 <b id="rbRoom">—</b></span>
+      <span>我是 <b id="rbMe">—</b></span>
+      <span>演讲人 <b id="rbSpeaker">未设置</b></span>
+      <span id="syncAgo">等待数据…</span>
+    </div>
+
+    <div id="scoreRows"></div>
+
+    <div class="actions" style="margin-top:12px">
+      <button id="cloudPush" class="primary big">提交我的评分</button>
+    </div>
+
+    <details style="margin-top:10px">
+      <summary>评语（可选）</summary>
+      <textarea id="comment" placeholder="亮点：……　建议：……"></textarea>
+    </details>
+
+    <details>
+      <summary>其他评委的分数（<span id="boardCount">0</span> 人）</summary>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>评委</th><th class="num">内容</th><th class="num">语言</th><th class="num">互动</th><th class="num">表现</th><th class="num">总分</th></tr></thead>
+          <tbody id="liveBody"><tr><td colspan="6" class="empty">还没有人提交</td></tr></tbody>
+        </table>
+      </div>
+      <div class="stats" id="liveStats"></div>
+      <div class="actions">
+        <button id="cloudRefresh">重新同步</button>
+        <button id="cloudLeave" class="danger">退出房间</button>
+      </div>
+    </details>
+  </section>
+
+  <details class="card" id="hostCard">
+    <summary>主持人工具（设置演讲人 / 归档 / 导出）</summary>
+    <div class="grid" style="margin-top:10px">
+      <div><label>当前演讲人</label><input id="cloudSpeaker" placeholder="例：Li Lei / 第3组"></div>
+      <div><label>演讲主题（可选）</label><input id="topic" placeholder="例：My Campus Life"></div>
+    </div>
+    <div class="actions">
+      <button id="cloudSetSpeaker" class="primary" disabled>设为当前演讲人</button>
+      <button id="cloudFinish" disabled>结束本场并归档</button>
+      <button id="cloudInvite" disabled>复制邀请信息</button>
+      <button id="exportNet">导出汇总 CSV</button>
+    </div>
+    <div class="stats" id="cloudInfo"></div>
+    <details style="margin-top:10px">
+      <summary>已归档场次 <span id="histCount" class="badge"></span></summary>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>演讲人</th><th class="num">人数</th><th class="num">内容</th><th class="num">语言</th><th class="num">互动</th><th class="num">表现</th><th class="num">平均总分</th></tr></thead>
+          <tbody id="histBody"><tr><td colspan="7" class="empty">暂无归档</td></tr></tbody>
+        </table>
+      </div>
+    </details>
+    <details>
+      <summary>中转服务器设置</summary>
+      <label style="margin-top:8px">MQTT 服务器</label>
+      <input id="cloudSrv" value="wss://broker.hivemq.com:8884/mqtt">
+      <p class="tipline">连不上时改：<code>ws://broker.hivemq.com:8000/mqtt</code>（明文更快）或 <code>wss://broker.emqx.io:8084/mqtt</code></p>
+    </details>
+  </details>
+
+  <details class="card" id="moreCard">
+    <summary>更多工具（批量评分 / 离线汇总码 / 本机记录 / 评分标准）</summary>
+
+    <details style="margin-top:10px">
+      <summary>快速批量评分（一人给全班打分，每人约 3 秒）</summary>
+      <div class="grid" style="margin-top:8px">
+        <div><label>学生名单（一行一个，可直接粘贴）</label><textarea id="batchList" rows="4" placeholder="张三&#10;李四&#10;王五"></textarea></div>
+        <div><label>评委</label><input id="batchJudge" placeholder="例：Ms. Wang"></div>
+      </div>
+      <div class="actions"><button id="batchStart" class="primary">开始批量评分</button><button id="batchClear">清空名单</button></div>
+      <div id="batchPanel" style="display:none">
+        <div class="stats"><div>第 <b id="batchIdx">1</b> / <span id="batchTotal">0</span> 位：<b id="batchName">—</b></div></div>
+        <div id="batchRows"></div>
+        <div class="actions">
+          <button id="batchSave" class="primary">保存并下一位（Enter）</button>
+          <button id="batchPrev">上一位</button>
+          <button id="batchSkip">跳过</button>
+          <button id="batchEnd">结束并统计</button>
+        </div>
+        <div class="stats" id="batchProgress"></div>
+      </div>
+    </details>
+
+    <details>
+      <summary>离线汇总码（网络不通时用，人数不限）</summary>
+      <div class="grid" style="margin-top:8px">
+        <div><label>我的评分汇总码（发到群里）</label>
+        <input id="myCode" readonly style="font-family:ui-monospace,Consolas,monospace;font-weight:800;color:var(--brand)"></div>
+      </div>
+      <div class="actions"><button id="copyCode" class="primary">复制汇总码</button></div>
+      <p class="tipline">格式 A=内容 B=语言 C=互动 D=表现，例如 <code>A3B2.5C1D2</code></p>
+      <label style="margin-top:8px">主持人：粘贴大家的汇总码（可整段粘贴群聊记录）</label>
+      <textarea id="importBox" rows="5" placeholder="A3B2.5C1D2&#10;张三 A2.5B2C0.5D2&#10;李四 2/2.5/1/2"></textarea>
+      <div class="actions">
+        <button id="doImport" class="primary">导入并统计</button>
+        <button id="extractImport">从聊天记录整段提取</button>
+        <button id="clearImport">清空</button>
+      </div>
+      <div class="stats" id="importResult"></div>
+    </details>
+
+    <details>
+      <summary>本机记录 <span id="count" class="badge"></span></summary>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>#</th><th>演讲人</th><th class="num">内容</th><th class="num">语言</th><th class="num">互动</th><th class="num">表现</th><th class="num">总分</th><th></th></tr></thead>
+          <tbody id="tbody"><tr><td colspan="8" class="empty">暂无记录</td></tr></tbody>
+        </table>
+      </div>
+      <div class="actions">
+        <button id="export">导出 CSV</button>
+        <button id="clear" class="danger">清空本机记录</button>
+      </div>
+    </details>
+
+    <details>
+      <summary>评分参考标准</summary>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>评分项</th><th>满分</th><th>优秀</th><th>合格</th><th>待提高</th></tr></thead>
+          <tbody>
+            <tr><td>内容 Content</td><td>3</td><td>主题明确、结构清晰、论据充分</td><td>基本切题但较浅</td><td>跑题或内容单薄</td></tr>
+            <tr><td>语言 Language</td><td>3</td><td>发音自然、语法准确、用词地道</td><td>错误较多但能听懂</td><td>影响理解</td></tr>
+            <tr><td>互动 Interaction</td><td>1</td><td>主动提问/回应，眼神交流充分</td><td>互动较少</td><td>全程念稿无互动</td></tr>
+            <tr><td>表现 Delivery</td><td>3</td><td>自信从容、时间把控好、PPT 配合默契</td><td>略紧张或超时</td><td>紧张、严重超时</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tipline">打分栏可输入 0 ~ 满分（步长 0.5，超出自动修正）。等级：≥9 优秀 ｜ 8-8.9 良好 ｜ 6-7.9 合格 ｜ 小于 6 待提高</p>
+    </details>
+  </details>
+
+  <details class="card" open>
+    <summary>我这一份的总分</summary>
+    <div class="total" style="margin-top:10px">
+      <div class="num"><span id="total">0</span><small>/ 10</small></div>
+      <div class="meta">
+        <div class="bar"><i id="barFill"></i></div>
+        <span id="grade" class="grade">—</span>
+        <div class="brk" id="breakdown"></div>
+      </div>
+    </div>
+  </details>
+</div>
+
+<div class="submitbar">
+  <div class="n"><span id="mbTotal">0</span><span> /10</span></div>
+  <div class="who"><b id="mbWho">—</b><span id="mbInfo">未连接</span></div>
+  <button class="primary" id="mbSubmit">提交</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ MqttMini：极简 MQTT over WebSocket 客户端（QoS0 + 保留消息） ============ */
+(function (root) {
+  function encodeLength(n) {
+    const out = [];
+    do { let b = n % 128; n = Math.floor(n / 128); if (n > 0) b |= 0x80; out.push(b); } while (n > 0);
+    return out;
+  }
+  function str(s) { const b = new TextEncoder().encode(s); return [b.length >> 8, b.length & 0xff, ...b]; }
+  function decodeLength(bytes, off) {
+    let mult = 1, val = 0, i = off, b;
+    do { b = bytes[i++]; val += (b & 127) * mult; mult *= 128; } while (b & 128);
+    return { len: val, used: i - off };
+  }
+  class MqttMini {
+    constructor(url, clientId, opts) {
+      this.url = url;
+      this.clientId = clientId || ('mm_' + Math.random().toString(16).slice(2, 10));
+      this.keepalive = (opts && opts.keepalive) || 45;
+      this.onmessage = null; this.onopen = null; this.onclose = null; this.onerror = null;
+      this.connected = false; this.lastRx = 0;
+      this._buf = new Uint8Array(0); this._timer = null; this._subs = []; this._pktId = 1;
+    }
+    connect() {
+      return new Promise((resolve, reject) => {
+        let settled = false;
+        let ws;
+        try { ws = new WebSocket(this.url, 'mqtt'); } catch (e) { return reject(e); }
+        this.ws = ws;
+        ws.binaryType = 'arraybuffer';
+        ws.onopen = () => { this._raw(this._connectPacket()); };
+        ws.onmessage = (ev) => {
+          this.lastRx = Date.now();
+          const data = ev.data instanceof ArrayBuffer ? new Uint8Array(ev.data) : new TextEncoder().encode(String(ev.data));
+          this._feed(data, () => { if (!settled) { settled = true; this.connected = true; resolve(); } },
+                          (err) => { if (!settled) { settled = true; reject(new Error(err)); } });
+        };
+        ws.onerror = () => { if (!settled) { settled = true; reject(new Error('WebSocket 连接失败')); } if (this.onerror) this.onerror(); };
+        ws.onclose = () => {
+          this.connected = false;
+          if (this._timer) { clearInterval(this._timer); this._timer = null; }
+          if (!settled) { settled = true; reject(new Error('连接被关闭')); }
+          if (this.onclose) this.onclose();
+        };
+        this._timer = setInterval(() => { if (this.connected) this._raw(new Uint8Array([0xC0, 0x00])); }, this.keepalive * 1000);
+      }).then(() => {
+        if (this.onopen) this.onopen();
+        this._subs.forEach(t => this.subscribe(t));
+      });
+    }
+    _connectPacket() {
+      const vh = [0x00, 0x04, 0x4d, 0x51, 0x54, 0x54, 0x04, 0x02, this.keepalive >> 8, this.keepalive & 0xff];
+      const body = [...vh, ...str(this.clientId)];
+      return new Uint8Array([0x10, ...encodeLength(body.length), ...body]);
+    }
+    subscribe(topic) {
+      if (!this._subs.includes(topic)) this._subs.push(topic);
+      if (!this.connected) return;
+      const id = (this._pktId = (this._pktId % 65535) + 1);
+      const body = [id >> 8, id & 0xff, ...str(topic), 0x00];
+      this._raw(new Uint8Array([0x82, ...encodeLength(body.length), ...body]));
+    }
+    publish(topic, payload, retain) {
+      const body = [...str(topic), ...new TextEncoder().encode(typeof payload === 'string' ? payload : JSON.stringify(payload))];
+      this._raw(new Uint8Array([(0x30 | (retain ? 0x01 : 0x00)), ...encodeLength(body.length), ...body]));
+    }
+    end() {
+      try { this._raw(new Uint8Array([0xE0, 0x00])); } catch (e) {}
+      if (this._timer) clearInterval(this._timer);
+      try { this.ws && this.ws.close(); } catch (e) {}
+      this.connected = false;
+    }
+    _raw(bytes) { if (this.ws && this.ws.readyState === 1) this.ws.send(bytes); }
+    _feed(chunk, onConnack, onErr) {
+      this.lastRx = Date.now();
+      const merged = new Uint8Array(this._buf.length + chunk.length);
+      merged.set(this._buf); merged.set(chunk, this._buf.length);
+      let off = 0;
+      while (merged.length - off >= 2) {
+        const type = merged[off] >> 4;
+        const len = decodeLength(merged, off + 1);
+        const start = off + 1 + len.used;
+        if (merged.length - start < len.len) break;
+        const body = merged.slice(start, start + len.len);
+        if (type === 2) { if (body[1] === 0) onConnack(); else onErr('CONNACK 返回码 ' + body[1]); }
+        else if (type === 3) {
+          const tl = (body[0] << 8) | body[1];
+          const topic = new TextDecoder().decode(body.slice(2, 2 + tl));
+          const payload = new TextDecoder().decode(body.slice(2 + tl));
+          if (this.onmessage) this.onmessage(topic, payload);
+        }
+        off = start + len.len;
+      }
+      this._buf = merged.slice(off);
+    }
+  }
+  root.MqttMini = MqttMini;
+  if (typeof module !== 'undefined' && module.exports) module.exports = MqttMini;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+
+<script>
+/* ================= 基础 ================= */
+const ITEMS = [
+  { key:'content',     zh:'内容', en:'Content',     max:3 },
+  { key:'language',    zh:'语言', en:'Language',    max:3 },
+  { key:'interaction', zh:'互动', en:'Interaction', max:1 },
+  { key:'delivery',    zh:'表现', en:'Delivery',    max:3 }
+];
+const state = { content:0, language:0, interaction:0, delivery:0 };
+let localRecords = [];
+let batch = { names:[], idx:0, judge:'', cur:null, map:{}, active:false };
+let cloud = { on:false, mq:null, srv:'wss://broker.hivemq.com:8884/mqtt', room:'', name:'', uid:'',
+              byUid:{}, who:{}, ctrl:{speaker:'',topic:'',round:0}, history:[], connecting:false,
+              autoNamed:false, retry:0, watchTimer:null, lastMsgAt:0, manualStop:true };
+let net = { round:null };
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => (Math.round((+n||0)*10)/10).toFixed(1).replace(/\.0$/,'');
+const total = () => ITEMS.reduce((s,i)=>s+state[i.key],0);
+const gradeOf = t => t>=9?['优秀','#e3f7ec','#0b7a41']:t>=8?['良好','#e3f7ec','#0b7a41']:t>=6?['合格','#fdf3e0','#8a5b00']:['待提高','#fdeaea','#b3232b'];
+let toastTimer = null;
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2000);
+}
+function copyText(txt, okMsg){
+  const done = ()=>toast(okMsg || '已复制');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt, done));
+  else fallbackCopy(txt, done);
+}
+function fallbackCopy(t, done){
+  const ta = document.createElement('textarea');
+  ta.value = t; document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); } catch(e){ toast('复制失败，请手动选中'); }
+  ta.remove();
+}
+function download(csv, filename){
+  const blob = new Blob(['\ufeff' + csv], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* ================= 评分界面 ================= */
+document.getElementById('scoreRows').innerHTML = ITEMS.map(it=>`
+  <div class="row">
+    <div class="nm">${it.zh}<small>${it.en} · 满分 ${it.max}</small></div>
+    <div class="stepper">
+      <button data-d="-0.5" data-k="${it.key}">−</button>
+      <input type="number" id="n-${it.key}" min="0" max="${it.max}" step="0.5" value="0" inputmode="decimal">
+      <button data-d="0.5" data-k="${it.key}">+</button>
+      <span class="of">/ ${it.max}</span>
+    </div>
+  </div>`).join('');
+function setScore(k, v, typing){
+  const it = ITEMS.find(i=>i.key===k);
+  let n = Number(v); if (!isFinite(n)) n = 0;
+  n = Math.max(0, Math.min(it.max, Math.round(n*2)/2));
+  state[k] = n;
+  const el = document.getElementById('n-'+k);
+  if (el && !typing && Number(el.value) !== n) el.value = n;
+  paint();
+}
+ITEMS.forEach(it=>{
+  const el = document.getElementById('n-'+it.key);
+  el.addEventListener('input', ()=>{ const v = parseFloat(el.value); if (isFinite(v)) setScore(it.key, v, true); });
+  el.addEventListener('blur', ()=>setScore(it.key, el.value));
+  el.addEventListener('keydown', e=>{
+    if (e.key === 'Enter'){ e.preventDefault(); el.blur(); }
+    else if (e.key === 'ArrowUp'){ e.preventDefault(); setScore(it.key, state[it.key] + 0.5); }
+    else if (e.key === 'ArrowDown'){ e.preventDefault(); setScore(it.key, state[it.key] - 0.5); }
+  });
+});
+document.querySelectorAll('.stepper button').forEach(b=>{
+  b.addEventListener('click', ()=>setScore(b.dataset.k, state[b.dataset.k] + parseFloat(b.dataset.d)));
+});
+function paint(){
+  ITEMS.forEach(it=>{ const el = document.getElementById('n-'+it.key); if (el && Number(el.value) !== state[it.key]) el.value = state[it.key]; });
+  const t = total(), g = gradeOf(t);
+  $('#total').textContent = fmt(t);
+  $('#mbTotal').textContent = fmt(t);
+  $('#barFill').style.width = (t*10) + '%';
+  const badge = $('#grade');
+  badge.textContent = g[0]; badge.style.background = g[1]; badge.style.color = g[2];
+  $('#breakdown').textContent = ITEMS.map(i=>i.zh + ' ' + fmt(state[i.key]) + '/' + i.max).join('　·　');
+  const mc = $('#myCode'); if (mc) mc.value = codeOf();
+}
+
+/* ================= 云端联机 ================= */
+function myUid(){
+  let u = localStorage.getItem('eng_uid');
+  if (!u){ u = Date.now().toString(36) + Math.random().toString(36).slice(2,8); localStorage.setItem('eng_uid', u); }
+  return u;
+}
+function roomCode(){
+  const s = 'abcdefghijkmnpqrstuvwxyz23456789';
+  let out = ''; for (let i=0;i<6;i++) out += s[Math.floor(Math.random()*s.length)];
+  return out;
+}
+function normalizeRoom(v){ const m = String(v||'').toLowerCase().match(/[a-z0-9][a-z0-9_-]{3,31}/); return m ? m[0] : ''; }
+function tBase(){ return 'engpres/' + cloud.room; }
+function tScore(uid){ return tBase() + '/score/' + uid; }
+
+function judgeList(){
+  const list = Object.keys(cloud.byUid).map(u => Object.assign({ uid:u }, cloud.byUid[u]));
+  const seen = {};
+  list.forEach(j=>{
+    const base = (j.name||'').trim() || '评委';
+    seen[base] = (seen[base]||0) + 1;
+    j.label = seen[base] > 1 ? (base + ' #' + seen[base]) : base;
+  });
+  return list;
+}
+function cloudSummary(){
+  const list = judgeList(), judges = {};
+  const avg = { content:0, language:0, interaction:0, delivery:0 };
+  let tot = 0;
+  list.forEach(j=>{
+    judges[j.label] = { scores: j.scores||{}, total: j.total||0, comment: j.comment||'' };
+    ITEMS.forEach(i=>{ avg[i.key] += (+(j.scores||{})[i.key] || 0); });
+    tot += (+j.total || 0);
+  });
+  if (list.length){
+    ITEMS.forEach(i=>{ avg[i.key] = Math.round(avg[i.key]/list.length*100)/100; });
+    tot = Math.round(tot/list.length*100)/100;
+  }
+  return { speaker: cloud.ctrl.speaker||'', topic: cloud.ctrl.topic||'', judges, avg,
+           totalAvg: tot, count: list.length, history: cloud.history, round: cloud.ctrl.round||0 };
+}
+function publishWho(){
+  if (!cloud.mq || !cloud.mq.connected || !cloud.name) return;
+  cloud.mq.publish(tBase() + '/who/' + cloud.uid,
+    JSON.stringify({ t:'who', name: cloud.name, uid: cloud.uid, ts: Date.now() }), true);
+}
+function assignName(){
+  const used = {};
+  Object.keys(cloud.byUid).forEach(u=>{ if (u!==cloud.uid){ const n=(cloud.byUid[u].name||'').trim(); if (n) used[n]=1; } });
+  Object.keys(cloud.who).forEach(u=>{ if (u!==cloud.uid){ const n=(cloud.who[u].name||'').trim(); if (n) used[n]=1; } });
+  const mine = (cloud.name||'').trim();
+  if (mine && !used[mine]){ cloud.autoNamed = false; return; }
+  let n = 1; while (used['评委'+n]) n++;
+  cloud.name = '评委' + n; cloud.autoNamed = true;
+  localStorage.setItem('eng_name', cloud.name);
+  const el = $('#cloudName'); if (el) el.value = cloud.name;
+  publishWho();
+  if (cloud.byUid[cloud.uid] && cloud.mq){
+    const j = cloud.byUid[cloud.uid];
+    cloud.mq.publish(tScore(cloud.uid), JSON.stringify({ t:'score', judge: cloud.name, uid: cloud.uid,
+      scores: j.scores, comment: j.comment, ts: j.ts }), true);
+  }
+}
+function cloudPublishState(){
+  if (!cloud.mq || !cloud.mq.connected) return;
+  cloud.mq.publish(tBase() + '/state', JSON.stringify({ t:'ctrl', speaker: cloud.ctrl.speaker||'',
+    topic: cloud.ctrl.topic||'', round: cloud.ctrl.round||0, ts: Date.now() }), true);
+}
+function cloudOnMessage(topic, payload){
+  cloud.lastMsgAt = Date.now();
+  const parts = topic.split('/'), kind = parts[2], uid = parts.slice(3).join('/');
+  if (payload === '' || payload == null){
+    if (kind === 'score'){ delete cloud.byUid[uid]; cloudRender(); }
+    else if (kind === 'who'){ delete cloud.who[uid]; cloudRender(); }
+    return;
+  }
+  let o; try { o = JSON.parse(payload); } catch(e){ return; }
+  if (kind === 'state' && o.t === 'ctrl'){
+    cloud.ctrl = { speaker: o.speaker||'', topic: o.topic||'', round: +o.round||0 };
+  } else if (kind === 'score'){
+    const u = o.uid || uid, sc = o.scores || {};
+    const t = ITEMS.reduce((a,i)=>a + (+sc[i.key] || 0), 0);
+    cloud.byUid[u] = { name: o.judge||'评委', scores: sc, comment: o.comment||'',
+                       total: Math.round(t*100)/100, ts: o.ts||0 };
+  } else if (kind === 'who'){
+    cloud.who[o.uid || uid] = { name: o.name||'', ts: o.ts||0 };
+  } else if (kind === 'hist' && o.id){
+    if (!cloud.history.some(h=>h.id === o.id)) cloud.history.push(o);
+  }
+  cloudRender();
+}
+function cloudSetButtons(){
+  const on = cloud.on;
+  ['cloudPush','cloudSetSpeaker','cloudFinish','cloudInvite','cloudRefresh','cloudLeave','mbSubmit']
+    .forEach(id=>{ const el=$('#'+id); if (el) el.disabled = !on; });
+  ['cloudJoin','cloudNew'].forEach(id=>{ const el=$('#'+id); if (el) el.disabled = on || cloud.connecting; });
+}
+function cloudRender(){
+  if (cloud.autoNamed && cloud.on) assignName();
+  const st = cloudSummary();
+  if (net.round !== null && st.round !== net.round){
+    ITEMS.forEach(i=>setScore(i.key, 0));
+    $('#comment').value = '';
+    toast('已切换到下一位：' + (st.speaker || '未命名') + '，请重新打分');
+    window.scrollTo({ top:0, behavior:'smooth' });
+  }
+  net.round = st.round;
+
+  document.body.classList.toggle('connected', cloud.on);
+  const badge = $('#cloudState');
+  badge.textContent = cloud.on ? '已加入' : (cloud.connecting ? '连接中…' : '未连接');
+  badge.className = 'badge ' + (cloud.on ? 'on' : 'off');
+
+  $('#rbRoom').textContent = cloud.room || '—';
+  $('#rbMe').textContent = cloud.name || '—';
+  $('#rbSpeaker').textContent = st.speaker || '未设置';
+  $('#mbWho').textContent = cloud.name ? ('我是 ' + cloud.name) : '—';
+  $('#mbInfo').textContent = cloud.on ? ((st.count ? st.count + ' 人已交' : '等待提交') + (st.speaker ? ' · ' + st.speaker : '')) : '未连接';
+
+  $('#boardCount').textContent = st.count;
+  const list = judgeList().sort((a,b)=>(b.total||0)-(a.total||0));
+  let html = list.map(j=>`<tr>
+      <td>${esc(j.label)}${j.uid === cloud.uid ? ' <span class="badge on">我</span>' : ''}</td>
+      <td class="num">${fmt((j.scores||{}).content)}</td><td class="num">${fmt((j.scores||{}).language)}</td>
+      <td class="num">${fmt((j.scores||{}).interaction)}</td><td class="num">${fmt((j.scores||{}).delivery)}</td>
+      <td class="num"><b>${fmt(j.total)}</b></td></tr>`).join('');
+  if (list.length) html += `<tr class="avgrow"><td>平均（${st.count} 人）</td>
+      <td class="num">${fmt(st.avg.content)}</td><td class="num">${fmt(st.avg.language)}</td>
+      <td class="num">${fmt(st.avg.interaction)}</td><td class="num">${fmt(st.avg.delivery)}</td>
+      <td class="num">${fmt(st.totalAvg)}</td></tr>`;
+  $('#liveBody').innerHTML = html || `<tr><td colspan="6" class="empty">还没有人提交</td></tr>`;
+  $('#liveStats').innerHTML = list.length
+    ? `<div>已提交 <b>${st.count}</b> 人</div><div>平均总分 <b>${fmt(st.totalAvg)}</b> / 10</div><div>当前演讲人 <b>${esc(st.speaker)||'未设置'}</b></div>`
+    : '';
+
+  const online = new Set(Object.keys(cloud.who)); if (cloud.name) online.add(cloud.uid);
+  $('#cloudInfo').innerHTML = cloud.on
+    ? `<div>房间 <b>${esc(cloud.room)}</b></div><div>已提交 <b>${st.count}</b> 人</div>`
+      + `<div>在线 <b>${online.size}</b> 人</div><div>平均 <b>${fmt(st.totalAvg)}</b>/10</div>`
+    : '';
+
+  const hist = cloud.history || [];
+  $('#histCount').textContent = hist.length ? hist.length + ' 场' : '';
+  $('#histBody').innerHTML = hist.length ? hist.slice().reverse().map(h=>`<tr>
+      <td>${esc(h.speaker)}</td><td class="num">${h.count}</td>
+      <td class="num">${fmt(h.avg.content)}</td><td class="num">${fmt(h.avg.language)}</td>
+      <td class="num">${fmt(h.avg.interaction)}</td><td class="num">${fmt(h.avg.delivery)}</td>
+      <td class="num"><b>${fmt(h.totalAvg)}</b></td></tr>`).join('')
+    : `<tr><td colspan="7" class="empty">暂无归档</td></tr>`;
+
+  cloudSetButtons();
+}
+function cloudConnect(first){
+  if (cloud.connecting) return;
+  if (cloud.mq){ try { cloud.mq.end(); } catch(e){} cloud.mq = null; }
+  cloud.connecting = true;
+  cloudSetButtons();
+  const mq = new MqttMini(cloud.srv, 'engpres_' + cloud.uid.slice(-8) + Math.random().toString(36).slice(2,5));
+  cloud.mq = mq;
+  mq.onmessage = cloudOnMessage;
+  mq.onclose = ()=>{ if (!cloud.manualStop) cloudRetry(); };
+  mq.connect().then(()=>{
+    mq.subscribe(tBase() + '/#');
+    cloud.on = true; cloud.connecting = false; cloud.retry = 0;
+    cloud.lastMsgAt = Date.now();
+    cloudRender();
+    startWatch();
+    if (first){
+      toast('已加入房间 ' + cloud.room);
+      const stagger = 400 + Math.floor(Math.random()*800);
+      setTimeout(()=>{ if (cloud.name){ cloud.autoNamed = false; publishWho(); } else { assignName(); } cloudRender(); }, stagger);
+      setTimeout(()=>{ assignName(); cloudRender(); }, stagger + 1300);
+    } else {
+      publishWho();
+      toast('已重新同步');
+    }
+  }).catch(()=>{ cloud.connecting = false; if (!cloud.manualStop) cloudRetry(); });
+}
+function cloudRetry(){
+  cloud.on = false; cloud.connecting = false;
+  if (cloud.watchTimer){ clearInterval(cloud.watchTimer); cloud.watchTimer = null; }
+  if (cloud.manualStop || !cloud.room) return;
+  const wait = Math.min(800 * Math.pow(1.7, cloud.retry||0), 8000);
+  cloud.retry = (cloud.retry||0) + 1;
+  const badge = $('#cloudState');
+  badge.textContent = '重连中…'; badge.className = 'badge off';
+  setTimeout(()=>{ if (!cloud.manualStop && cloud.room) cloudConnect(false); }, wait);
+}
+function cloudResync(silent){
+  if (!cloud.room){ toast('请先加入房间'); return; }
+  cloud.byUid = {}; cloud.who = {}; cloud.lastMsgAt = 0;
+  if (!silent) toast('正在重新同步…');
+  cloudConnect(false);
+}
+function startWatch(){
+  if (cloud.watchTimer) clearInterval(cloud.watchTimer);
+  cloud.watchTimer = setInterval(()=>{
+    if (!cloud.on || !cloud.mq) return;
+    if (Date.now() - (cloud.mq.lastRx || cloud.lastMsgAt || 0) > 100000) cloudResync(true);
+  }, 15000);
+}
+function cloudStart(){
+  cloud.manualStop = false;
+  cloud.retry = 0;
+  cloud.srv = ($('#cloudSrv').value.trim() || 'wss://broker.hivemq.com:8884/mqtt');
+  cloud.uid = myUid();
+  cloud.name = ($('#cloudName').value.trim() || localStorage.getItem('eng_name') || '').trim();
+  cloud.autoNamed = !cloud.name;
+  cloud.byUid = {}; cloud.who = {}; cloud.history = [];
+  cloud.ctrl = { speaker:'', topic:'', round:0 };
+  net.round = null;
+  cloud.lastMsgAt = 0;
+  cloudConnect(true);
+}
+function cloudStop(msg){
+  cloud.manualStop = true; cloud.on = false; cloud.connecting = false;
+  if (cloud.watchTimer){ clearInterval(cloud.watchTimer); cloud.watchTimer = null; }
+  if (cloud.mq){ try { cloud.mq.end(); } catch(e){} cloud.mq = null; }
+  cloud.room = '';
+  document.body.classList.remove('connected');
+  const badge = $('#cloudState');
+  badge.textContent = msg || '未连接'; badge.className = 'badge off';
+  cloudSetButtons();
+}
+function cloudSubmit(){
+  if (!cloud.on) return toast('请先加入房间');
+  if (!cloud.name) assignName();
+  if (total() === 0 && !confirm('你还没有打分（0 分），确定提交吗？')) return;
+  const payload = { t:'score', judge: cloud.name, uid: cloud.uid, scores: { ...state },
+                    comment: $('#comment').value.trim(), ts: Date.now() };
+  cloud.byUid[cloud.uid] = { name: cloud.name, scores: payload.scores, comment: payload.comment,
+                             total: total(), ts: payload.ts };
+  cloud.lastMsgAt = Date.now();
+  cloudRender();
+  cloud.mq.publish(tScore(cloud.uid), JSON.stringify(payload), true);
+  toast('已提交：' + fmt(total()) + ' 分');
+}
+$('#cloudJoin').addEventListener('click', ()=>{
+  const code = normalizeRoom($('#cloudRoom').value);
+  if (!code){ toast('请填房间码'); $('#cloudRoom').focus(); return; }
+  cloud.room = code; $('#cloudRoom').value = code;
+  cloudStart();
+});
+$('#cloudNew').addEventListener('click', ()=>{
+  cloud.room = roomCode(); $('#cloudRoom').value = cloud.room;
+  cloudStart();
+  setTimeout(()=>toast('房间已创建：' + cloud.room + '（发到群里）'), 700);
+});
+$('#cloudPush').addEventListener('click', cloudSubmit);
+$('#mbSubmit').addEventListener('click', cloudSubmit);
+$('#cloudRefresh').addEventListener('click', ()=>cloudResync());
+$('#cloudLeave').addEventListener('click', ()=>{ cloudStop('已断开'); toast('已退出房间'); });
+$('#cloudSetSpeaker').addEventListener('click', ()=>{
+  if (!cloud.on) return toast('请先加入房间');
+  const sp = $('#cloudSpeaker').value.trim();
+  if (!sp) return toast('请填写演讲人姓名');
+  cloud.ctrl = { speaker: sp, topic: $('#topic').value.trim(), round: (cloud.ctrl.round||0) + 1 };
+  cloudPublishState(); cloudRender();
+  toast('已设为：' + sp + '（大家手机自动清零）');
+});
+$('#cloudFinish').addEventListener('click', ()=>{
+  if (!cloud.on) return toast('请先加入房间');
+  if (!confirm('结束本场并归档？所有人手机自动清零，准备下一位。')) return;
+  const st = cloudSummary();
+  if (st.count){
+    const entry = { id:'h'+Date.now(), speaker: st.speaker||'(未填写)', topic: st.topic||'', count: st.count,
+                    avg: st.avg, totalAvg: st.totalAvg, judges: JSON.parse(JSON.stringify(st.judges)) };
+    cloud.history.push(entry);
+    cloud.mq.publish(tBase() + '/hist/' + entry.id, JSON.stringify(entry), true);
+    Object.keys(cloud.byUid).forEach(u => cloud.mq.publish(tScore(u), '', true));
+    cloud.byUid = {};
+  }
+  cloud.ctrl = { speaker:'', topic:'', round: (cloud.ctrl.round||0) + 1 };
+  cloudPublishState(); cloudRender();
+  toast('已归档，进入下一位');
+});
+$('#cloudInvite').addEventListener('click', ()=>{
+  const txt = '【英语演讲评分】\n1) 打开我发的文件：英语Presentation评分表.html\n2) 房间码：' + cloud.room
+    + '\n3) 把房间码填进「房间码」框 → 点「加入并开始打分」';
+  copyText(txt, '邀请信息已复制，发到群里即可');
+});
+$('#exportNet').addEventListener('click', ()=>{
+  const rows = [['演讲人','人数','内容','语言','互动','表现','平均总分','评委明细']];
+  (cloud.history||[]).forEach(h=>rows.push([h.speaker, h.count, fmt(h.avg.content), fmt(h.avg.language),
+    fmt(h.avg.interaction), fmt(h.avg.delivery), fmt(h.totalAvg),
+    Object.keys(h.judges||{}).map(k=>k+':'+fmt(h.judges[k].total)).join(' ')]));
+  const st = cloudSummary();
+  if (st.count) rows.push([st.speaker||'(进行中)', st.count, fmt(st.avg.content), fmt(st.avg.language),
+    fmt(st.avg.interaction), fmt(st.avg.delivery), fmt(st.totalAvg),
+    judgeList().map(j=>j.label+':'+fmt(j.total)).join(' ')]);
+  if (rows.length < 2) return toast('暂无数据可导出');
+  download(rows.map(r=>r.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\r\n'),
+           '英语演讲评分汇总_' + new Date().toISOString().slice(0,10) + '.csv');
+  toast('已导出');
+});
+document.addEventListener('visibilitychange', ()=>{ if (!document.hidden && cloud.room && !cloud.manualStop && !cloud.on) cloudResync(true); });
+window.addEventListener('online', ()=>{ if (cloud.room && !cloud.manualStop && !cloud.on) cloudResync(true); });
+window.addEventListener('focus', ()=>{ if (cloud.room && !cloud.manualStop && !cloud.on) cloudResync(true); });
+setInterval(()=>{
+  const el = document.getElementById('syncAgo'); if (!el) return;
+  if (!cloud.on){ el.textContent = '未连接'; return; }
+  if (!cloud.lastMsgAt){ el.textContent = '等待数据…'; return; }
+  const sec = Math.round((Date.now() - cloud.lastMsgAt)/1000);
+  el.textContent = sec <= 2 ? '刚刚同步' : (sec + ' 秒前同步');
+}, 1000);
+
+/* ================= 离线汇总码 ================= */
+const CODE_KEYS = ['A','B','C','D'];
+function codeOf(){ return ITEMS.map((it,i)=>CODE_KEYS[i] + fmt(state[it.key])).join(''); }
+function parseCodeLine(line){
+  let s = String(line||'').trim(); if (!s) return null;
+  const pick = k => { const m = s.match(new RegExp(k + '\\s*[:：=]?\\s*(\\d+(?:\\.\\d+)?)','i')); return m ? parseFloat(m[1]) : NaN; };
+  const nameOf = idx => s.slice(0, idx).replace(/[,，:：;；\s]+$/,'').trim();
+  if (/A/i.test(s)){
+    const c=pick('A'), l=pick('B'), i2=pick('C'), d=pick('D');
+    if ([c,l,i2,d].every(isFinite)){ const m = s.match(/A\s*[:：=]?\s*\d/i); return { name: m?nameOf(m.index):'', content:c, language:l, interaction:i2, delivery:d }; }
+  }
+  const nums = s.match(/\d+(?:\.\d+)?/g);
+  if (nums && nums.length >= 4){
+    const idx = s.indexOf(nums[0]);
+    return { name: nameOf(idx), content:+nums[0], language:+nums[1], interaction:+nums[2], delivery:+nums[3] };
+  }
+  return null;
+}
+function extractAllCodes(text){
+  const out = [];
+  const clean = t => String(t||'').replace(/\d{1,2}月\d{1,2}日/g,' ').replace(/\d{1,2}:\d{2}(:\d{2})?/g,' ')
+      .replace(/[\[\]【】()（）:：,，;；\-—|]/g,' ').trim().split(/\s+/).filter(w=>w && !/^\d+(\.\d+)?$/.test(w)).join(' ').slice(0,14);
+  const nameAt = idx => {
+    const lines = text.slice(0, idx).split('\n');
+    const same = clean(lines[lines.length-1]); if (same) return same;
+    for (let k = lines.length-2; k >= Math.max(0, lines.length-4); k--){ const c = clean(lines[k]); if (c) return c; }
+    return '';
+  };
+  const put = (idx, n) => out.push({ name: nameAt(idx), content:n[0], language:n[1], interaction:n[2], delivery:n[3] });
+  let m;
+  const re1 = /A\s*[:：=]?\s*(\d+(?:\.\d+)?)[\s,，;；/|]*B\s*[:：=]?\s*(\d+(?:\.\d+)?)[\s,，;；/|]*C\s*[:：=]?\s*(\d+(?:\.\d+)?)[\s,，;；/|]*D\s*[:：=]?\s*(\d+(?:\.\d+)?)/gi;
+  while ((m = re1.exec(text))) put(m.index, [+m[1],+m[2],+m[3],+m[4]]);
+  const re2 = /[【\[（(]\s*(\d+(?:\.\d+)?)\s*[/|,，\-]\s*(\d+(?:\.\d+)?)\s*[/|,，\-]\s*(\d+(?:\.\d+)?)\s*[/|,，\-]\s*(\d+(?:\.\d+)?)\s*[】\]）)]/g;
+  while ((m = re2.exec(text))) put(m.index, [+m[1],+m[2],+m[3],+m[4]]);
+  const re3 = /内容\s*[:：]?\s*(\d+(?:\.\d+)?)[^\d]{0,10}?语言\s*[:：]?\s*(\d+(?:\.\d+)?)[^\d]{0,10}?互动\s*[:：]?\s*(\d+(?:\.\d+)?)[^\d]{0,10}?表现\s*[:：]?\s*(\d+(?:\.\d+)?)/g;
+  while ((m = re3.exec(text))) put(m.index, [+m[1],+m[2],+m[3],+m[4]]);
+  return out;
+}
+function addRecord(speaker, judge, sc, comment){
+  const t = ITEMS.reduce((a,i)=>a + (+sc[i.key]||0), 0);
+  localRecords.push({ id:'r'+Date.now()+Math.random().toString(36).slice(2,5), speaker, judge,
+                      scores:{...sc}, total: Math.round(t*100)/100, comment: comment||'', ts: Date.now() });
+}
+$('#copyCode').addEventListener('click', ()=>copyText(codeOf(), '汇总码已复制：' + codeOf()));
+$('#clearImport').addEventListener('click', ()=>{ $('#importBox').value=''; $('#importResult').innerHTML=''; });
+$('#doImport').addEventListener('click', ()=>{
+  const lines = $('#importBox').value.split(/\r?\n/);
+  const speaker = $('#cloudSpeaker').value.trim() || '未指定演讲人';
+  let ok=0, bad=0, auto=0;
+  lines.forEach(line=>{
+    if (!line.trim()) return;
+    const p = parseCodeLine(line); if (!p){ bad++; return; }
+    const sc = {}; ITEMS.forEach(it=>{ let v = +p[it.key]; if (!isFinite(v)) v = 0; sc[it.key] = Math.max(0, Math.min(it.max, Math.round(v*2)/2)); });
+    addRecord(speaker, (p.name||'').trim() || ('离线评委' + (++auto)), sc, '离线汇总'); ok++;
+  });
+  saveLocal(); renderLocal();
+  $('#importResult').innerHTML = ok ? `<div>导入 <b>${ok}</b> 条${bad?`，跳过 ${bad} 行`:''}</div>` : `<div style="color:var(--bad)">没有识别到有效汇总码（${bad} 行）</div>`;
+  toast(ok ? '已导入 ' + ok + ' 条' : '没识别到汇总码');
+});
+$('#extractImport').addEventListener('click', ()=>{
+  const found = extractAllCodes($('#importBox').value);
+  if (!found.length) return toast('没提取到汇总码');
+  const speaker = $('#cloudSpeaker').value.trim() || '未指定演讲人';
+  let auto = 0;
+  found.forEach(p=>{
+    const sc = {}; ITEMS.forEach(it=>{ let v = +p[it.key]; if (!isFinite(v)) v = 0; sc[it.key] = Math.max(0, Math.min(it.max, Math.round(v*2)/2)); });
+    addRecord(speaker, (p.name||'').trim() || ('离线评委' + (++auto)), sc, '离线汇总');
+  });
+  saveLocal(); renderLocal();
+  $('#importResult').innerHTML = `<div>从聊天记录提取到 <b>${found.length}</b> 条</div>`;
+  toast('已提取 ' + found.length + ' 条');
+});
+
+/* ================= 快速批量评分 ================= */
+function parseNameList(text){
+  const seen = {};
+  return String(text||'').split(/\r?\n/)
+    .map(s=>s.replace(/^\s*\d+\s*[.、)．:：]?\s*/,'').trim())
+    .filter(s=>{ if (!s || s.length>24 || seen[s]) return false; seen[s]=1; return true; });
+}
+document.getElementById('batchRows').innerHTML = ITEMS.map(it=>`
+  <div class="row">
+    <div class="nm">${it.zh}<small>${it.en} · ${it.max}</small></div>
+    <div class="stepper">
+      <button data-bd="-0.5" data-bk="${it.key}">−</button>
+      <input type="number" id="b-${it.key}" min="0" max="${it.max}" step="0.5" value="0" inputmode="decimal">
+      <button data-bd="0.5" data-bk="${it.key}">+</button>
+      <span class="of">/ ${it.max}</span>
+    </div>
+  </div>`).join('');
+function bGet(k){ return (batch.cur && batch.cur[k]) || 0; }
+function bSet(k, v, typing){
+  const it = ITEMS.find(i=>i.key===k);
+  let n = Number(v); if (!isFinite(n)) n = 0;
+  n = Math.max(0, Math.min(it.max, Math.round(n*2)/2));
+  batch.cur = batch.cur || {}; batch.cur[k] = n;
+  const el = document.getElementById('b-'+k);
+  if (el && !typing && Number(el.value) !== n) el.value = n;
+  bPaint();
+}
+function bPaint(){
+  const t = ITEMS.reduce((s,i)=>s+bGet(i.key),0);
+  $('#batchProgress').innerHTML = `<div>本题总分 <b>${fmt(t)}</b> / 10</div><div>已完成 <b>${Object.keys(batch.map).length}</b> / ${batch.names.length}</div>`;
+}
+document.querySelectorAll('[data-bk]').forEach(b=>b.addEventListener('click',()=>bSet(b.dataset.bk, bGet(b.dataset.bk) + parseFloat(b.dataset.bd))));
+ITEMS.forEach(it=>{
+  const el = document.getElementById('b-'+it.key);
+  el.addEventListener('input', ()=>{ const v = parseFloat(el.value); if (isFinite(v)) bSet(it.key, v, true); });
+  el.addEventListener('blur', ()=>bSet(it.key, el.value));
+  el.addEventListener('keydown', e=>{
+    if (e.key === 'Enter'){ e.preventDefault(); batchSaveNext(); }
+    else if (e.key === 'ArrowUp'){ e.preventDefault(); bSet(it.key, bGet(it.key)+0.5); }
+    else if (e.key === 'ArrowDown'){ e.preventDefault(); bSet(it.key, bGet(it.key)-0.5); }
+  });
+});
+function bLoad(){
+  const name = batch.names[batch.idx];
+  $('#batchIdx').textContent = Math.min(batch.idx+1, batch.names.length);
+  $('#batchTotal').textContent = batch.names.length;
+  $('#batchName').textContent = name || '（已到末尾）';
+  const prev = batch.map[name];
+  batch.cur = prev ? { ...prev.scores } : { content:0, language:0, interaction:0, delivery:0 };
+  ITEMS.forEach(it=>{ const el = document.getElementById('b-'+it.key); if (el) el.value = batch.cur[it.key]; });
+  bPaint();
+}
+function bSave(){
+  const name = batch.names[batch.idx]; if (!name) return;
+  const sc = { ...(batch.cur||{}) };
+  const t = ITEMS.reduce((s,i)=>s+(+sc[i.key]||0),0);
+  const obj = { id: batch.map[name] || ('b'+Date.now()), speaker: name, judge: batch.judge,
+                scores: sc, total: t, comment:'批量评分', ts: Date.now() };
+  const i = localRecords.findIndex(r=>r.id === obj.id);
+  if (i >= 0) localRecords[i] = obj; else localRecords.push(obj);
+  batch.map[name] = obj.id;
+  saveLocal(); renderLocal();
+}
+function batchSaveNext(){
+  if (!batch.active) return;
+  bSave(); batch.idx++;
+  if (batch.idx >= batch.names.length){ batchFinish(); return; }
+  bLoad();
+}
+function batchFinish(){
+  batch.active = false;
+  $('#batchName').textContent = '全部完成';
+  bPaint();
+  toast('批量评分完成，已并入「本机记录」');
+}
+$('#batchStart').addEventListener('click', ()=>{
+  const names = parseNameList($('#batchList').value);
+  if (!names.length) return toast('请先粘贴学生名单');
+  batch = { names, idx:0, judge: $('#batchJudge').value.trim() || '评委', cur:null, map:{}, active:true };
+  $('#batchPanel').style.display = 'block';
+  bLoad();
+  toast('共 ' + names.length + ' 人，打完按 Enter 下一位');
+});
+$('#batchClear').addEventListener('click', ()=>{ $('#batchList').value=''; toast('名单已清空'); });
+$('#batchSave').addEventListener('click', batchSaveNext);
+$('#batchSkip').addEventListener('click', ()=>{ if (!batch.active) return; batch.idx++; if (batch.idx>=batch.names.length) return batchFinish(); bLoad(); });
+$('#batchPrev').addEventListener('click', ()=>{ if (!batch.active || batch.idx===0) return; batch.idx--; bLoad(); });
+$('#batchEnd').addEventListener('click', ()=>{ if (batch.names.length) batchFinish(); });
+
+/* ================= 本机记录 ================= */
+function saveLocal(){ try { localStorage.setItem('eng_records_v2', JSON.stringify(localRecords)); } catch(e){} }
+function loadLocal(){ try { localRecords = JSON.parse(localStorage.getItem('eng_records_v2')) || []; } catch(e){ localRecords = []; } }
+function renderLocal(){
+  const tb = $('#tbody');
+  const sorted = [...localRecords].sort((a,b)=>b.total - a.total);
+  tb.innerHTML = sorted.length ? sorted.map((r,i)=>`<tr>
+      <td>${i+1}</td><td>${esc(r.speaker)}</td>
+      <td class="num">${fmt(r.scores.content)}</td><td class="num">${fmt(r.scores.language)}</td>
+      <td class="num">${fmt(r.scores.interaction)}</td><td class="num">${fmt(r.scores.delivery)}</td>
+      <td class="num"><b>${fmt(r.total)}</b></td>
+      <td><div class="btnrow"><button data-del="${r.id}">删</button></div></td></tr>`).join('')
+    : `<tr><td colspan="8" class="empty">暂无记录（批量评分 / 离线导入会出现在这里）</td></tr>`;
+  $('#count').textContent = localRecords.length ? localRecords.length + ' 条' : '';
+  tb.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{
+    localRecords = localRecords.filter(r=>r.id !== b.dataset.del); saveLocal(); renderLocal();
+  }));
+}
+$('#clear').addEventListener('click', ()=>{
+  if (!localRecords.length) return toast('暂无记录');
+  if (confirm('清空本机 ' + localRecords.length + ' 条记录？')){ localRecords=[]; saveLocal(); renderLocal(); toast('已清空'); }
+});
+$('#export').addEventListener('click', ()=>{
+  if (!localRecords.length) return toast('暂无记录可导出');
+  const rows = [['演讲人','评委','内容(3)','语言(3)','互动(1)','表现(3)','总分(10)','评语']];
+  [...localRecords].sort((a,b)=>b.total-a.total).forEach(r=>rows.push([r.speaker, r.judge,
+    fmt(r.scores.content), fmt(r.scores.language), fmt(r.scores.interaction), fmt(r.scores.delivery),
+    fmt(r.total), (r.comment||'').replace(/[\r\n]+/g,' ')]));
+  download(rows.map(r=>r.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\r\n'),
+           '英语演讲评分_' + new Date().toISOString().slice(0,10) + '.csv');
+  toast('已导出 ' + localRecords.length + ' 条');
+});
+
+/* ================= 初始化 ================= */
+(function init(){
+  const p = new URLSearchParams(location.search);
+  const roomFromUrl = normalizeRoom(p.get('room') || '');
+  const nameFromUrl = (p.get('name') || '').trim();
+  if (roomFromUrl) $('#cloudRoom').value = roomFromUrl;
+  if (nameFromUrl) $('#cloudName').value = nameFromUrl;
+  loadLocal(); renderLocal(); paint(); cloudSetButtons();
+  if (roomFromUrl && p.get('auto') !== '0'){ cloud.room = roomFromUrl; cloudStart(); }
+})();
+</script>
+</body>
+</html>
