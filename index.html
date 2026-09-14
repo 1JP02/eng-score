@@ -133,6 +133,7 @@
     <div class="actions" style="margin-top:12px">
       <button id="cloudPush" class="primary big">提交我的评分</button>
     </div>
+    <p class="tipline" id="lockTip"></p>
 
     <details style="margin-top:10px">
       <summary>评语（可选）</summary>
@@ -2761,16 +2762,16 @@ function setScore(k, v, typing){
 }
 ITEMS.forEach(it=>{
   const el = document.getElementById('n-'+it.key);
-  el.addEventListener('input', ()=>{ const v = parseFloat(el.value); if (isFinite(v)) setScore(it.key, v, true); });
-  el.addEventListener('blur', ()=>setScore(it.key, el.value));
+  el.addEventListener('input', ()=>{ if (isLocked()) { el.value = state[it.key]; return; } const v = parseFloat(el.value); if (isFinite(v)) setScore(it.key, v, true); });
+  el.addEventListener('blur', ()=>{ if (isLocked()){ el.value = state[it.key]; return; } setScore(it.key, el.value); });
   el.addEventListener('keydown', e=>{
     if (e.key === 'Enter'){ e.preventDefault(); el.blur(); }
-    else if (e.key === 'ArrowUp'){ e.preventDefault(); setScore(it.key, state[it.key] + 0.5); }
-    else if (e.key === 'ArrowDown'){ e.preventDefault(); setScore(it.key, state[it.key] - 0.5); }
+    else if (e.key === 'ArrowUp'){ e.preventDefault(); if (!isLocked()) setScore(it.key, state[it.key] + 0.5); }
+    else if (e.key === 'ArrowDown'){ e.preventDefault(); if (!isLocked()) setScore(it.key, state[it.key] - 0.5); }
   });
 });
 document.querySelectorAll('.stepper button').forEach(b=>{
-  b.addEventListener('click', ()=>setScore(b.dataset.k, state[b.dataset.k] + parseFloat(b.dataset.d)));
+  b.addEventListener('click', ()=>{ if (isLocked()) return; setScore(b.dataset.k, state[b.dataset.k] + parseFloat(b.dataset.d)); });
 });
 function paint(){
   ITEMS.forEach(it=>{ const el = document.getElementById('n-'+it.key); if (el && Number(el.value) !== state[it.key]) el.value = state[it.key]; });
@@ -2866,8 +2867,13 @@ function cloudOnMessage(topic, payload){
   } else if (kind === 'score'){
     const u = o.uid || uid, sc = o.scores || {};
     const t = ITEMS.reduce((a,i)=>a + (+sc[i.key] || 0), 0);
-    cloud.byUid[u] = { name: o.judge||'评委', scores: sc, comment: o.comment||'',
-                       total: Math.round(t*100)/100, ts: o.ts||0 };
+    const incoming = { name: o.judge||'评委', scores: sc, comment: o.comment||'',
+                       total: Math.round(t*100)/100, ts: o.ts||0, round: +o.round||0 };
+    const prev = cloud.byUid[u];
+    if (prev && (prev.round||0) === incoming.round && (prev.ts||0) <= (incoming.ts||0)){
+      return;                       // 同一场重复提交：保留第一次，忽略后来的
+    }
+    cloud.byUid[u] = incoming;
   } else if (kind === 'who'){
     cloud.who[o.uid || uid] = { name: o.name||'', ts: o.ts||0 };
   } else if (kind === 'hist' && o.id){
@@ -2901,7 +2907,11 @@ function cloudRender(){
   $('#rbMe').textContent = cloud.name || '—';
   $('#rbSpeaker').textContent = st.speaker || '未设置';
   $('#mbWho').textContent = cloud.name ? ('我是 ' + cloud.name) : '—';
-  $('#mbInfo').textContent = cloud.on ? ((st.count ? st.count + ' 人已交' : '等待提交') + (st.speaker ? ' · ' + st.speaker : '')) : '未连接';
+  const lockedNow = isLocked();
+  $('#mbInfo').textContent = cloud.on
+    ? (lockedNow ? ('已提交 ' + fmt(myEntry().total) + ' 分，等待下一位')
+                 : ((st.count ? st.count + ' 人已交' : '等待提交') + (st.speaker ? ' · ' + st.speaker : '')))
+    : '未连接';
 
   $('#boardCount').textContent = st.count;
   const list = judgeList().sort((a,b)=>(b.total||0)-(a.total||0));
@@ -2936,6 +2946,7 @@ function cloudRender(){
 
   renderQR();
   cloudSetButtons();
+  paintLock();
 }
 function cloudConnect(first){
   if (cloud.connecting) return;
@@ -3009,18 +3020,38 @@ function cloudStop(msg){
   badge.textContent = msg || '未连接'; badge.className = 'badge off';
   cloudSetButtons();
 }
+/* 本场是否已经提交过（同一位演讲人只能交一次） */
+function myEntry(){ return cloud.byUid[cloud.uid]; }
+function isLocked(){
+  const e = myEntry();
+  return !!(cloud.on && e && (+e.round || 0) === (cloud.ctrl.round || 0));
+}
+function paintLock(){
+  const locked = isLocked();
+  const push = $('#cloudPush'), mb = $('#mbSubmit');
+  if (push){ push.disabled = !cloud.on || locked; push.textContent = locked ? '已提交 ✓ 本场不能重复提交' : '提交我的评分'; }
+  if (mb){ mb.disabled = !cloud.on || locked; mb.textContent = locked ? '已提交' : '提交'; }
+  document.querySelectorAll('#scoreRows input, #scoreRows button').forEach(el=>{
+    el.disabled = locked; el.readOnly = locked;
+  });
+  const tip = $('#lockTip');
+  if (tip) tip.textContent = locked
+    ? '本场评分已提交，不能修改或重复提交；等主持人切换到下一位后会自动解锁并清零。'
+    : '';
+}
 function cloudSubmit(){
   if (!cloud.on) return toast('请先加入房间');
   if (!cloud.name) assignName();
+  if (isLocked()) return toast('本场你已经提交过了，不能重复提交');
   if (total() === 0 && !confirm('你还没有打分（0 分），确定提交吗？')) return;
-  const payload = { t:'score', judge: cloud.name, uid: cloud.uid, scores: { ...state },
-                    comment: $('#comment').value.trim(), ts: Date.now() };
+  const payload = { t:'score', judge: cloud.name, uid: cloud.uid, round: cloud.ctrl.round || 0,
+                    scores: { ...state }, comment: $('#comment').value.trim(), ts: Date.now() };
   cloud.byUid[cloud.uid] = { name: cloud.name, scores: payload.scores, comment: payload.comment,
-                             total: total(), ts: payload.ts };
+                             total: total(), ts: payload.ts, round: payload.round };
   cloud.lastMsgAt = Date.now();
   cloudRender();
   cloud.mq.publish(tScore(cloud.uid), JSON.stringify(payload), true);
-  toast('已提交：' + fmt(total()) + ' 分');
+  toast('已提交：' + fmt(total()) + ' 分（本场不可再改）');
 }
 $('#cloudJoin').addEventListener('click', ()=>{
   const code = normalizeRoom($('#cloudRoom').value);
@@ -3041,9 +3072,14 @@ $('#cloudSetSpeaker').addEventListener('click', ()=>{
   if (!cloud.on) return toast('请先加入房间');
   const sp = $('#cloudSpeaker').value.trim();
   if (!sp) return toast('请填写演讲人姓名');
+  const st = cloudSummary();
+  if (st.count && !confirm('已有 ' + st.count + ' 人提交本场分数。\n切换演讲人将清空本场分数（大家可重新提交），确定继续？')) return;
+  /* 清空本场分数 → 板子回到干净状态，所有人解锁可重新提交 */
+  Object.keys(cloud.byUid).forEach(u => cloud.mq.publish(tScore(u), '', true));
+  cloud.byUid = {};
   cloud.ctrl = { speaker: sp, topic: $('#topic').value.trim(), round: (cloud.ctrl.round||0) + 1 };
   cloudPublishState(); cloudRender();
-  toast('已设为：' + sp + '（大家手机自动清零）');
+  toast('已设为：' + sp + '（本场已清空，大家可重新打分）');
 });
 $('#cloudFinish').addEventListener('click', ()=>{
   if (!cloud.on) return toast('请先加入房间');
