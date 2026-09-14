@@ -158,6 +158,7 @@
 
   <details class="card" id="hostCard">
     <summary>主持人工具（设置演讲人 / 归档 / 导出）</summary>
+    <div class="stats" id="ownerInfo" style="margin-top:8px"></div>
     <div class="grid" style="margin-top:10px">
       <div><label>当前演讲人</label><input id="cloudSpeaker" placeholder="例：Li Lei / 第3组"></div>
       <div><label>演讲主题（可选）</label><input id="topic" placeholder="例：My Campus Life"></div>
@@ -166,9 +167,10 @@
       <button id="cloudSetSpeaker" class="primary" disabled>设为当前演讲人</button>
       <button id="cloudFinish" disabled>结束本场并归档</button>
       <button id="cloudInvite" disabled>复制邀请信息</button>
-      <button id="exportNet">导出汇总 CSV</button>
+      <button id="exportNet" disabled>导出汇总 CSV</button>
+      <button id="claimOwner" style="display:none">接管房主权限</button>
     </div>
-    <details open style="margin-top:10px">
+    <details open style="margin-top:10px" id="qrDetails">
       <summary>二维码邀请（同学扫码直接进房间）</summary>
       <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-top:10px">
         <div id="qrBox" style="background:#fff;padding:8px;border-radius:12px;line-height:0;border:1px solid var(--line)"></div>
@@ -2710,7 +2712,8 @@ let localRecords = [];
 let batch = { names:[], idx:0, judge:'', cur:null, map:{}, active:false };
 let cloud = { on:false, mq:null, srv:'wss://broker.hivemq.com:8884/mqtt', room:'', name:'', uid:'',
               byUid:{}, who:{}, ctrl:{speaker:'',topic:'',round:0}, history:[], connecting:false,
-              autoNamed:false, retry:0, watchTimer:null, lastMsgAt:0, manualStop:true };
+              autoNamed:false, retry:0, watchTimer:null, lastMsgAt:0, manualStop:true,
+              owner:null, claimOwner:false };
 let net = { round:null };
 
 const $ = s => document.querySelector(s);
@@ -2826,6 +2829,12 @@ function cloudSummary(){
   return { speaker: cloud.ctrl.speaker||'', topic: cloud.ctrl.topic||'', judges, avg,
            totalAvg: tot, count: list.length, history: cloud.history, round: cloud.ctrl.round||0 };
 }
+function isOwner(){ return !!(cloud.owner && cloud.owner.uid === cloud.uid); }
+function publishOwner(){
+  if (!cloud.mq || !cloud.mq.connected) return;
+  cloud.mq.publish(tBase() + '/owner',
+    JSON.stringify({ t:'owner', uid: cloud.uid, name: cloud.name || '房主', ts: Date.now() }), true);
+}
 function publishWho(){
   if (!cloud.mq || !cloud.mq.connected || !cloud.name) return;
   cloud.mq.publish(tBase() + '/who/' + cloud.uid,
@@ -2874,6 +2883,9 @@ function cloudOnMessage(topic, payload){
       return;                       // 同一场重复提交：保留第一次，忽略后来的
     }
     cloud.byUid[u] = incoming;
+  } else if (kind === 'owner'){
+    if (payload === '') cloud.owner = null;
+    else cloud.owner = { uid: o.uid || uid, name: o.name || '房主', ts: o.ts || 0 };
   } else if (kind === 'who'){
     cloud.who[o.uid || uid] = { name: o.name||'', ts: o.ts||0 };
   } else if (kind === 'hist' && o.id){
@@ -2882,9 +2894,12 @@ function cloudOnMessage(topic, payload){
   cloudRender();
 }
 function cloudSetButtons(){
-  const on = cloud.on;
-  ['cloudPush','cloudSetSpeaker','cloudFinish','cloudInvite','cloudRefresh','cloudLeave','mbSubmit']
-    .forEach(id=>{ const el=$('#'+id); if (el) el.disabled = !on; });
+  const on = cloud.on, own = isOwner();
+  ['cloudPush','cloudRefresh','cloudLeave','mbSubmit'].forEach(id=>{ const el=$('#'+id); if (el) el.disabled = !on; });
+  /* 主持人功能：只有房主可用 */
+  ['cloudSetSpeaker','cloudFinish','cloudInvite','exportNet','copyLink','qrRefresh'].forEach(id=>{
+    const el = $('#'+id); if (el) el.disabled = !on || !own;
+  });
   ['cloudJoin','cloudNew'].forEach(id=>{ const el=$('#'+id); if (el) el.disabled = on || cloud.connecting; });
 }
 function cloudRender(){
@@ -2944,6 +2959,16 @@ function cloudRender(){
       <td class="num"><b>${fmt(h.totalAvg)}</b></td></tr>`).join('')
     : `<tr><td colspan="7" class="empty">暂无归档</td></tr>`;
 
+  /* 房主信息与权限提示 */
+  const own = isOwner();
+  const oi = $('#ownerInfo');
+  if (oi){
+    oi.innerHTML = !cloud.on ? ''
+      : own ? '<div>👑 你是<b>房主</b>，可以使用下面的主持人功能</div>'
+            : '<div>房主：<b>' + esc((cloud.owner && cloud.owner.name) || '（尚未指定）') + '</b>　主持人功能仅房主可用</div>';
+  }
+  const qd = $('#qrDetails'); if (qd) qd.style.display = (cloud.on && !own) ? 'none' : '';
+  const tc = $('#claimOwner'); if (tc) tc.style.display = (cloud.on && !own) ? '' : 'none';
   renderQR();
   cloudSetButtons();
   paintLock();
@@ -2961,6 +2986,7 @@ function cloudConnect(first){
     mq.subscribe(tBase() + '/#');
     cloud.on = true; cloud.connecting = false; cloud.retry = 0;
     cloud.lastMsgAt = Date.now();
+    if (cloud.claimOwner){ cloud.claimOwner = false; cloud.owner = { uid: cloud.uid, name: cloud.name || '房主', ts: Date.now() }; publishOwner(); }
     cloudRender();
     startWatch();
     if (first){
@@ -3043,7 +3069,12 @@ function cloudSubmit(){
   if (!cloud.on) return toast('请先加入房间');
   if (!cloud.name) assignName();
   if (isLocked()) return toast('本场你已经提交过了，不能重复提交');
-  if (total() === 0 && !confirm('你还没有打分（0 分），确定提交吗？')) return;
+  const t0 = total();
+  const detail = ITEMS.map(i=>i.zh + ' ' + fmt(state[i.key]) + '/' + i.max).join('　');
+  const msg = '确认提交本场评分？\n\n' + detail + '\n总分：' + fmt(t0) + ' / 10\n\n'
+    + (t0 === 0 ? '⚠ 你还没有打分（0 分）！\n\n' : '')
+    + '提交后本场不能修改，也不能重复提交。';
+  if (!confirm(msg)) { toast('已取消提交'); return; }
   const payload = { t:'score', judge: cloud.name, uid: cloud.uid, round: cloud.ctrl.round || 0,
                     scores: { ...state }, comment: $('#comment').value.trim(), ts: Date.now() };
   cloud.byUid[cloud.uid] = { name: cloud.name, scores: payload.scores, comment: payload.comment,
@@ -3061,8 +3092,18 @@ $('#cloudJoin').addEventListener('click', ()=>{
 });
 $('#cloudNew').addEventListener('click', ()=>{
   cloud.room = roomCode(); $('#cloudRoom').value = cloud.room;
+  cloud.claimOwner = true;                       // 建房的人 = 房主
   cloudStart();
-  setTimeout(()=>toast('房间已创建：' + cloud.room + '（发到群里）'), 700);
+  setTimeout(()=>toast('房间已创建：' + cloud.room + '（你是房主）'), 700);
+});
+$('#claimOwner').addEventListener('click', ()=>{
+  if (!cloud.on) return toast('请先加入房间');
+  const cur = (cloud.owner && cloud.owner.name) || '（无）';
+  if (!confirm('当前房主：' + cur + '\n\n确定要接管主持权限吗？（所有人都会看到你成为房主）')) return;
+  publishOwner();
+  cloud.owner = { uid: cloud.uid, name: cloud.name || '房主', ts: Date.now() };
+  cloudRender();
+  toast('你已成为房主');
 });
 $('#cloudPush').addEventListener('click', cloudSubmit);
 $('#mbSubmit').addEventListener('click', cloudSubmit);
